@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { auth } from "@/lib/auth";
 import { getDashboardStats } from "@/lib/drafts";
 import { getEnv } from "@/lib/store";
@@ -5,15 +7,26 @@ import { DashboardHeader } from "@/components/dashboard-shell";
 
 export const dynamic = "force-dynamic";
 
+function isGa4Configured() {
+  const propertyId = getEnv("GA4_PROPERTY_ID");
+  const keyPath = getEnv("GOOGLE_SERVICE_ACCOUNT_KEY_PATH");
+  if (!propertyId || !keyPath) return false;
+  return fs.existsSync(path.join(process.cwd(), keyPath));
+}
+
 export default async function AnalyticsPage() {
   const session = await auth();
   const stats = getDashboardStats();
 
   const integrations = [
-    { name: "Google Analytics 4", configured: Boolean(getEnv("GA4_PROPERTY_ID")), note: "MARKETING_GA4_PROPERTY_ID" },
+    {
+      name: "Google Analytics 4",
+      configured: isGa4Configured(),
+      note: "GA4_PROPERTY_ID + GOOGLE_SERVICE_ACCOUNT_KEY_PATH",
+    },
     { name: "Google Search Console", configured: Boolean(getEnv("GSC_SITE_URL")), note: "GSC_SITE_URL" },
-    { name: "OpenRouter", configured: Boolean(getEnv("OPENROUTER_API_KEY")), note: "Content agent" },
-    { name: "Buffer", configured: Boolean(getEnv("BUFFER_ACCESS_TOKEN")), note: "Publish agent" },
+    { name: "OpenRouter", configured: Boolean(getEnv("OPENROUTER_API_KEY")), note: "OPENROUTER_API_KEY" },
+    { name: "Buffer", configured: Boolean(getEnv("BUFFER_ACCESS_TOKEN")), note: "BUFFER_ACCESS_TOKEN" },
   ];
 
   return (

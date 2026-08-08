@@ -53,12 +53,20 @@ jobs:
 
       - name: Start application
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          MARKETING_GA_SERVICE_ACCOUNT_JSON: ${{ secrets.MARKETING_GA_SERVICE_ACCOUNT_JSON }}
         with:
           host: ${{ secrets.DIGITALOCEAN_HOST }}
           username: ${{ secrets.DIGITALOCEAN_USERNAME }}
           key: ${{ secrets.DIGITALOCEAN_SSH_KEY }}
+          envs: MARKETING_GA_SERVICE_ACCOUNT_JSON
           script: |
             cd /var/www/smart-book-marketing
+
+            if [ -n "$MARKETING_GA_SERVICE_ACCOUNT_JSON" ]; then
+              printf '%s' "$MARKETING_GA_SERVICE_ACCOUNT_JSON" > service-account-key.json
+              chmod 600 service-account-key.json
+            fi
 
             cat > .env << ENVEOF
             NODE_ENV=production
@@ -76,6 +84,7 @@ jobs:
             PRODUCT_NAME=Smart Book Planner
             OPENROUTER_API_KEY=${{ secrets.MARKETING_OPENROUTER_API_KEY }}
             GA4_PROPERTY_ID=${{ secrets.MARKETING_GA4_PROPERTY_ID }}
+            GOOGLE_SERVICE_ACCOUNT_KEY_PATH=./service-account-key.json
             GSC_SITE_URL=https://www.smartbookplanner.com
             SIGNAL_CRON=0 6 * * 1
             CONTENT_CRON=0 7 * * 1
