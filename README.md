@@ -17,9 +17,19 @@ npm run agents:run-once
 
 Full steps: **[PLAN.md](./PLAN.md)**
 
-**GitHub Actions** (push to `main`): reuses `DIGITALOCEAN_*` secrets from rogan-writer + `MARKETING_*` secrets.
+### Branches
 
-**Manual:**
+| Branch | Deploys? | Use for |
+|--------|----------|---------|
+| `dev` | No — CI only | Day-to-day development |
+| `qa` | No — CI only | Pre-release review |
+| `main` | Yes → production | Stable releases only |
+
+Flow: `dev` → merge to `qa` → merge to `main` (triggers deploy to marketing.smartbookplanner.com).
+
+**GitHub Actions:** push to `main` deploys automatically. Use **Actions → Deploy to Production → Run workflow** for a manual redeploy without a commit.
+
+**Manual deploy:**
 ```bash
 DO_HOST=209.97.163.64 DO_USER=root DO_KEY=~/.ssh/your_key ./scripts/deploy.sh
 ```
