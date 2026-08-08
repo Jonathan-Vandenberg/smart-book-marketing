@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { appendAgentRun } from "@/lib/store";
+import { pickComparisonTopic } from "@/lib/competitors";
 import { createDraft } from "@/lib/drafts";
 import { listPlatforms } from "@/lib/platforms";
 import { generateMarketingPost } from "@/lib/openrouter";
@@ -12,6 +13,17 @@ const TOPICS = [
   { pillar: "ai-done-right", topic: "AI that reads your whole cast, not just the paragraph" },
   { pillar: "build-in-public", topic: "Shipping Smart Book Planner marketing ops in public" },
 ];
+
+function pickTopic(index: number) {
+  const comparison = pickComparisonTopic(index);
+  if (comparison) {
+    return {
+      pillar: comparison.pillar,
+      topic: `${comparison.topic} (${comparison.competitor.name} comparison)`,
+    };
+  }
+  return TOPICS[index % TOPICS.length];
+}
 
 export async function runContentAgent() {
   try {
@@ -27,7 +39,7 @@ export async function runContentAgent() {
 
     let created = 0;
     for (const platform of platforms) {
-      const pick = TOPICS[created % TOPICS.length];
+      const pick = pickTopic(created);
       const pillarLabel = pillars.find((p) => p.id === pick.pillar)?.label ?? pick.pillar;
       const body = await generateMarketingPost({
         platformName: platform.name,

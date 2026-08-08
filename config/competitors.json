@@ -1,0 +1,385 @@
+{
+  "product": "Smart Book Planner",
+  "productUrl": "https://smartbookplanner.com",
+  "positioning": {
+    "fiction": "Never lose the plot — 7-point structure, cast, timeline, scene cards, AI consistency",
+    "research": "Structure first, citations handled — templates, fact-check, APA/MLA/Chicago",
+    "ai": "Planning + AI that reads your whole manuscript, not just the paragraph",
+    "pricing": "Free forever for planning and export; Pro for hosted AI or BYOK"
+  },
+  "priorityForSeo": [
+    "plottr",
+    "scrivener",
+    "sudowrite",
+    "dabble",
+    "novel-factory",
+    "storyflow",
+    "noveling",
+    "overleaf"
+  ],
+  "tiers": [
+    {
+      "id": "direct",
+      "label": "Direct competitors",
+      "competitors": [
+        {
+          "slug": "plottr",
+          "name": "Plottr",
+          "url": "https://plottr.com",
+          "category": "fiction-planning",
+          "overlap": "Visual plot, timeline, character arcs, series planning",
+          "ourEdge": "Plan and write in one app with AI, scene cards, and export — no Scrivener handoff",
+          "comparisonAngle": "Plottr plans the story; Smart Book Planner plans and drafts it",
+          "seoKeywords": ["plottr alternative", "plottr vs", "best novel planning software"],
+          "contentTopics": [
+            "Plottr vs Smart Book Planner: when you need more than a timeline",
+            "Why I stopped exporting Plottr outlines into another writing app"
+          ]
+        },
+        {
+          "slug": "scrivener",
+          "name": "Scrivener",
+          "url": "https://www.literatureandlatte.com/scrivener/overview",
+          "category": "manuscript-writing",
+          "overlap": "Long-form writing, corkboard, outliner, research binder",
+          "ourEdge": "Web-native, free planning tier, 7-point plot matrix, manuscript-aware AI",
+          "comparisonAngle": "Scrivener organizes words; Smart Book Planner organizes story logic",
+          "seoKeywords": ["scrivener alternative", "scrivener vs", "online scrivener"],
+          "contentTopics": [
+            "Scrivener alternative for writers who want plot tools built in",
+            "Corkboards are great — until your cast contradicts chapter 14"
+          ]
+        },
+        {
+          "slug": "dabble",
+          "name": "Dabble",
+          "url": "https://www.dabblewriter.com",
+          "category": "fiction-planning-writing",
+          "overlap": "Plot grid, goals, cloud writing environment",
+          "ourEdge": "Research paper mode, fact-check with citations, BYOK AI, ZAR-friendly Pro",
+          "comparisonAngle": "Dabble for plot-driven fiction; Smart Book Planner for fiction + academia",
+          "seoKeywords": ["dabble writer alternative", "dabble vs"],
+          "contentTopics": [
+            "Dabble vs Smart Book Planner for plot-first novelists",
+            "Plot grids are step one — scene cards are where consistency lives"
+          ]
+        },
+        {
+          "slug": "novel-factory",
+          "name": "The Novel Factory",
+          "url": "https://www.novel-software.com/the-novel-factory",
+          "category": "fiction-workflow",
+          "overlap": "Guided novel workflow, characters, plotting, drafting",
+          "ourEdge": "Modern web UX, free tier, semantic AI across the whole manuscript",
+          "comparisonAngle": "Structured roadmap vs flexible 7-point + scene-card system",
+          "seoKeywords": ["novel factory alternative", "novel writing software"],
+          "contentTopics": [
+            "The Novel Factory vs a planner built for 2026 workflows",
+            "Guided steps vs tools that adapt to your process"
+          ]
+        },
+        {
+          "slug": "sudowrite",
+          "name": "Sudowrite",
+          "url": "https://www.sudowrite.com",
+          "category": "ai-fiction",
+          "overlap": "AI prose, Story Engine, scene-level generation",
+          "ourEdge": "Deep planning first; AI reads cast, plot, timeline, and locations together",
+          "comparisonAngle": "Sudowrite generates prose; Smart Book Planner protects story coherence",
+          "seoKeywords": ["sudowrite alternative", "sudowrite vs", "ai novel writing"],
+          "contentTopics": [
+            "Sudowrite vs Smart Book Planner: AI that knows your cast",
+            "Story Engine is powerful — if you already know your spine"
+          ]
+        },
+        {
+          "slug": "storyflow",
+          "name": "Storyflow",
+          "url": "https://storyflow.so",
+          "category": "ai-planning",
+          "overlap": "AI canvas, plot, characters, whole-novel planning",
+          "ourEdge": "Timeline, scene cards, research papers, export, free planning tier",
+          "comparisonAngle": "AI canvas planning vs structured plot matrix + draft workflow",
+          "seoKeywords": ["storyflow alternative", "ai novel planning"],
+          "contentTopics": [
+            "Storyflow vs Smart Book Planner for planning the saggy middle",
+            "Canvas planning vs scene cards and timelines"
+          ]
+        },
+        {
+          "slug": "sidekickwriter",
+          "name": "SidekickWriter",
+          "url": "https://www.sidekickwriter.com",
+          "category": "ai-workflow",
+          "overlap": "AI-driven plan-to-draft workflow, speed-focused",
+          "ourEdge": "Author-controlled structure, academic mode, fact-check, BYOK",
+          "comparisonAngle": "Speed vs control — planning tools you can audit",
+          "seoKeywords": ["sidekickwriter alternative", "ai manuscript software"],
+          "contentTopics": [
+            "Fast AI drafting vs planning you can trust at chapter 20",
+            "Seven plot points before you let AI touch the prose"
+          ]
+        },
+        {
+          "slug": "novelcrafter",
+          "name": "Novelcrafter",
+          "url": "https://novelcrafter.com",
+          "category": "ai-planning-writing",
+          "overlap": "Codex, planning, AI chat about the book",
+          "ourEdge": "7-point plot matrix, scene cards, research templates, fact-check",
+          "comparisonAngle": "Codex knowledge vs structured plot + timeline tooling",
+          "seoKeywords": ["novelcrafter alternative", "novelcrafter vs"],
+          "contentTopics": [
+            "Novelcrafter vs Smart Book Planner: codex vs plot matrix",
+            "When your AI needs timelines, not just lore"
+          ]
+        },
+        {
+          "slug": "noveling",
+          "name": "Noveling",
+          "url": "https://noveling.dev",
+          "category": "all-in-one-ai",
+          "overlap": "Free all-in-one editor, many AI models, full creative suite",
+          "ourEdge": "Research/academic templates, fact-check, Paystack/ZAR pricing, manuscript semantic search",
+          "comparisonAngle": "General AI novel suite vs planner built for fiction + papers",
+          "seoKeywords": ["noveling alternative", "free novel writing software"],
+          "contentTopics": [
+            "Noveling vs Smart Book Planner for researchers who also write fiction",
+            "Free planning forever — pay only when you want hosted AI"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "specialist",
+      "label": "Specialist tools",
+      "competitors": [
+        {
+          "slug": "novlr",
+          "name": "Novlr",
+          "url": "https://www.novlr.org",
+          "category": "distraction-free-writing",
+          "overlap": "Cloud novel drafting",
+          "ourEdge": "Plot, timeline, scene cards, AI, research mode",
+          "comparisonAngle": "Clean drafting vs full manuscript development",
+          "seoKeywords": ["novlr alternative"],
+          "contentTopics": ["Novlr is for drafting — Smart Book Planner is for never losing the plot"]
+        },
+        {
+          "slug": "novelpad",
+          "name": "NovelPad",
+          "url": "https://novelpad.co",
+          "category": "cloud-planning",
+          "overlap": "Simple cloud novel planning",
+          "ourEdge": "Deeper structure tools, AI, academic workflow",
+          "comparisonAngle": "Light planning vs professional plot infrastructure",
+          "seoKeywords": ["novelpad alternative"],
+          "contentTopics": ["When simple cloud planning isn't enough for a series"]
+        },
+        {
+          "slug": "bibisco",
+          "name": "bibisco",
+          "url": "https://bibisco.com",
+          "category": "architecture-fiction",
+          "overlap": "Architecture-first novel design, characters, chapters",
+          "ourEdge": "Web app, AI, timeline, scene cards, research papers",
+          "comparisonAngle": "Architecture questions vs visual plot + scene workflow",
+          "seoKeywords": ["bibisco alternative"],
+          "contentTopics": ["bibisco asks great questions — scene cards answer them chapter by chapter"]
+        },
+        {
+          "slug": "ywriter",
+          "name": "yWriter",
+          "url": "http://www.spacejock.com/yWriter7.html",
+          "category": "scene-based-free",
+          "overlap": "Free scene-based organization",
+          "ourEdge": "Modern UX, cloud, AI, export, research templates",
+          "comparisonAngle": "Legacy scene tracker vs 2026 manuscript OS",
+          "seoKeywords": ["ywriter alternative"],
+          "contentTopics": ["Outgrowing yWriter: what to look for in your next writing app"]
+        },
+        {
+          "slug": "aeon-timeline",
+          "name": "Aeon Timeline",
+          "url": "https://www.aeontimeline.com",
+          "category": "chronology",
+          "overlap": "Dense timelines, time-jumping plots",
+          "ourEdge": "Timeline integrated with scenes, cast, and drafting",
+          "comparisonAngle": "Pure chronology vs story development platform",
+          "seoKeywords": ["aeon timeline alternative"],
+          "contentTopics": ["Timeline tools vs timelines wired to your actual scenes"]
+        },
+        {
+          "slug": "atticus",
+          "name": "Atticus",
+          "url": "https://www.atticus.io",
+          "category": "formatting",
+          "overlap": "Write + publish-ready formatting",
+          "ourEdge": "Planning, AI, plot tools; export on free tier",
+          "comparisonAngle": "Formatting-first vs structure-first (export when ready)",
+          "seoKeywords": ["atticus alternative"],
+          "contentTopics": ["Plan the book first, format later — Smart Book Planner + Atticus workflow"]
+        },
+        {
+          "slug": "chapter",
+          "name": "Chapter",
+          "url": "https://chapter.pub",
+          "category": "ai-generation",
+          "overlap": "Full AI novel generation from framework",
+          "ourEdge": "Author-controlled planning, consistency AI, not prompt-to-book",
+          "comparisonAngle": "Generated manuscript vs yours, with AI as editor",
+          "seoKeywords": ["ai novel generator alternative"],
+          "contentTopics": ["Why I don't want an AI to write my book — just to remember my cast"]
+        }
+      ]
+    },
+    {
+      "id": "adjacent",
+      "label": "Planning-adjacent",
+      "competitors": [
+        {
+          "slug": "notion",
+          "name": "Notion",
+          "url": "https://www.notion.so",
+          "category": "general-productivity",
+          "overlap": "Custom novel databases, wiki-style planning",
+          "ourEdge": "Purpose-built book workflow, no template maintenance",
+          "comparisonAngle": "Build your own vs built for books",
+          "seoKeywords": ["notion novel template alternative"],
+          "contentTopics": ["Stop maintaining a Notion novel bible — use tools built for manuscripts"]
+        },
+        {
+          "slug": "obsidian",
+          "name": "Obsidian",
+          "url": "https://obsidian.md",
+          "category": "linked-notes",
+          "overlap": "Local-first connected notes for story wiki",
+          "ourEdge": "Plot matrix, scene cards, AI with full manuscript context",
+          "comparisonAngle": "Linked notes vs structured story development",
+          "seoKeywords": ["obsidian novel writing alternative"],
+          "contentTopics": ["Obsidian for lore; Smart Book Planner for plot you can execute"]
+        },
+        {
+          "slug": "milanote",
+          "name": "Milanote",
+          "url": "https://milanote.com",
+          "category": "visual-boards",
+          "overlap": "Visual mood boards and plot canvases",
+          "ourEdge": "From board to timeline, scenes, draft, export",
+          "comparisonAngle": "Inspiration board vs executable outline",
+          "seoKeywords": ["milanote novel planning alternative"],
+          "contentTopics": ["Mood boards don't track timeline conflicts — scene cards do"]
+        },
+        {
+          "slug": "campfire",
+          "name": "Campfire",
+          "url": "https://www.campfirewriting.com",
+          "category": "worldbuilding",
+          "overlap": "Modular worldbuilding — species, magic, cultures",
+          "ourEdge": "Plot spine + cast + timeline first; world as part of manuscript",
+          "comparisonAngle": "World wiki vs story-ready planning",
+          "seoKeywords": ["campfire writing alternative"],
+          "contentTopics": ["Worldbuilding depth is useless if your midpoint sags"]
+        },
+        {
+          "slug": "world-anvil",
+          "name": "World Anvil",
+          "url": "https://www.worldanvil.com",
+          "category": "worldbuilding-wiki",
+          "overlap": "Fantasy/SF world wiki and campaign tools",
+          "ourEdge": "Fiction + memoir + research; plot tools, not just lore",
+          "comparisonAngle": "Encyclopedia vs manuscript planner",
+          "seoKeywords": ["world anvil for novelists alternative"],
+          "contentTopics": ["Your reader needs a plot, not a 400-article wiki"]
+        }
+      ]
+    },
+    {
+      "id": "research",
+      "label": "Research & academic",
+      "competitors": [
+        {
+          "slug": "overleaf",
+          "name": "Overleaf",
+          "url": "https://www.overleaf.com",
+          "category": "latex-academic",
+          "overlap": "Academic paper writing, collaboration, templates",
+          "ourEdge": "No LaTeX required, fact-check, AI, same app as fiction projects",
+          "comparisonAngle": "LaTeX pro tool vs structured templates + AI assist",
+          "seoKeywords": ["overleaf alternative", "academic writing software"],
+          "contentTopics": [
+            "Overleaf vs Smart Book Planner for researchers who hate LaTeX",
+            "Build your paper template once — reuse across every submission"
+          ]
+        },
+        {
+          "slug": "jenni-ai",
+          "name": "Jenni AI",
+          "url": "https://jenni.ai",
+          "category": "ai-academic",
+          "overlap": "AI-assisted academic writing",
+          "ourEdge": "Full manuscript system, templates, fact-check with citations, fiction too",
+          "comparisonAngle": "AI writing assistant vs research project workspace",
+          "seoKeywords": ["jenni ai alternative"],
+          "contentTopics": ["Jenni helps you write — Smart Book Planner helps you structure and verify"]
+        },
+        {
+          "slug": "paperpal",
+          "name": "Paperpal",
+          "url": "https://paperpal.com",
+          "category": "academic-editing",
+          "overlap": "Grammar and academic language polish",
+          "ourEdge": "Planning, templates, fact-check, long-form book + paper in one place",
+          "comparisonAngle": "Editing layer vs full research workflow",
+          "seoKeywords": ["paperpal alternative"],
+          "contentTopics": ["Polish is the last 10% — structure is the first 90%"]
+        }
+      ]
+    },
+    {
+      "id": "downstream",
+      "label": "Formatting & distribution",
+      "competitors": [
+        {
+          "slug": "reedsy",
+          "name": "Reedsy",
+          "url": "https://reedsy.com",
+          "category": "publish-marketplace",
+          "overlap": "Writing tool + freelancer marketplace + export",
+          "ourEdge": "Deep planning and AI before you hire editors or format",
+          "comparisonAngle": "Publish ecosystem vs manuscript development",
+          "seoKeywords": ["reedsy alternative"],
+          "contentTopics": ["Finish planning in Smart Book Planner, polish on Reedsy"]
+        },
+        {
+          "slug": "vellum",
+          "name": "Vellum",
+          "url": "https://vellum.pub",
+          "category": "formatting-mac",
+          "overlap": "Premium ebook/print formatting (Mac)",
+          "ourEdge": "Free PDF/EPUB/Kindle export; Vellum for final polish if needed",
+          "comparisonAngle": "Export included vs formatting specialist",
+          "seoKeywords": ["vellum alternative"],
+          "contentTopics": ["Smart Book Planner export → Vellum polish workflow"]
+        }
+      ]
+    }
+  ],
+  "comparisonPostTemplates": [
+    "{competitor} vs Smart Book Planner: which fits your workflow?",
+    "I tried {competitor} — here's what I wanted that it didn't do",
+    "Smart Book Planner as a {competitor} alternative for {audience}",
+    "{competitor} plans well. Smart Book Planner plans and writes.",
+    "Free planning beats {competitor} when you're still finding your process"
+  ],
+  "alternativeToTags": [
+    "Alternative to Scrivener",
+    "Alternative to Sudowrite",
+    "Alternative to Plottr",
+    "Plottr + Scrivener in one app",
+    "AI that reads your whole manuscript",
+    "Novel planning software free",
+    "Research paper template software",
+    "Fact-check citations before submit"
+  ]
+}
