@@ -1,0 +1,44 @@
+{
+  "pillars": [
+    {
+      "id": "craft-fiction",
+      "label": "Craft & planning (fiction)",
+      "topics": [
+        "7 plot points before chapter 1",
+        "Scene card workflow in 5 minutes",
+        "Timeline conflicts that ruin novels"
+      ],
+      "cta": "Free planning tools"
+    },
+    {
+      "id": "research-academia",
+      "label": "Research & academia",
+      "topics": [
+        "Build your paper template once",
+        "Citation styles without the pain",
+        "Fact-check before you submit"
+      ],
+      "cta": "Research templates + fact-check (Pro)"
+    },
+    {
+      "id": "ai-done-right",
+      "label": "AI done right",
+      "topics": [
+        "AI that reads your whole cast, not just the paragraph",
+        "Hosted credits vs BYOK",
+        "Editor agent vs blank-page ChatGPT"
+      ],
+      "cta": "Pro upgrade"
+    },
+    {
+      "id": "build-in-public",
+      "label": "Build in public",
+      "topics": [
+        "Shipping features",
+        "MRR and signup metrics",
+        "How semantic search powers consistency"
+      ],
+      "cta": "Follow journey + try product"
+    }
+  ]
+}

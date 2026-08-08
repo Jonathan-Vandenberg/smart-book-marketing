@@ -1,0 +1,32 @@
+{
+  "name": "smart-book-marketing",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agentic marketing, analytics, and dashboard for Smart Book Planner",
+  "scripts": {
+    "dev": "next dev --port 3001",
+    "build": "next build",
+    "start": "next start --port 3001",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "agents:run-once": "node --import tsx scripts/run-agents-once.mjs"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "next": "^15.5.0",
+    "next-auth": "^5.0.0-beta.25",
+    "node-cron": "^4.6.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  }
+}

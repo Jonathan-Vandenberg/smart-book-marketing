@@ -1,0 +1,13 @@
+.env
+.env.local
+.env.*.local
+node_modules/
+.next/
+out/
+data/
+*.log
+.deploy-key.tmp
+.DS_Store
+service-account-key.json
+*.pem
+*.key
