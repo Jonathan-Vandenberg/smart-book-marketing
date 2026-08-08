@@ -1,0 +1,20 @@
+[
+  { "slug": "x", "name": "X (Twitter)", "handle": "@SmartBookPlanner", "tier": 1, "automationLevel": "high", "category": "social" },
+  { "slug": "linkedin", "name": "LinkedIn", "handle": "Smart Book Planner", "tier": 1, "automationLevel": "medium", "category": "social" },
+  { "slug": "reddit", "name": "Reddit", "handle": "u/SmartBookPlanner", "tier": 1, "automationLevel": "manual", "category": "community" },
+  { "slug": "indie-hackers", "name": "Indie Hackers", "handle": "founder profile", "tier": 1, "automationLevel": "medium", "category": "community" },
+  { "slug": "beehiiv", "name": "Beehiiv", "handle": "Plot Notes", "tier": 1, "automationLevel": "high", "category": "email" },
+  { "slug": "buffer", "name": "Buffer", "handle": "scheduling hub", "tier": 1, "automationLevel": "high", "category": "tool" },
+  { "slug": "youtube", "name": "YouTube", "handle": "Smart Book Planner", "tier": 1, "automationLevel": "medium", "category": "video" },
+  { "slug": "product-hunt", "name": "Product Hunt", "handle": "launch listing", "tier": 1, "automationLevel": "manual", "category": "launch" },
+  { "slug": "google-analytics", "name": "Google Analytics 4", "handle": "smartbookplanner.com", "tier": 1, "automationLevel": "full", "category": "analytics" },
+  { "slug": "search-console", "name": "Google Search Console", "handle": "www.smartbookplanner.com", "tier": 1, "automationLevel": "full", "category": "analytics" },
+  { "slug": "ghost", "name": "Ghost / Blog", "handle": "SEO blog", "tier": 2, "automationLevel": "high", "category": "blog" },
+  { "slug": "instagram", "name": "Instagram", "handle": "@SmartBookPlanner", "tier": 2, "automationLevel": "medium", "category": "social" },
+  { "slug": "threads", "name": "Threads", "handle": "@SmartBookPlanner", "tier": 2, "automationLevel": "medium", "category": "social" },
+  { "slug": "tiktok", "name": "TikTok", "handle": "@SmartBookPlanner", "tier": 2, "automationLevel": "low", "category": "video" },
+  { "slug": "pinterest", "name": "Pinterest", "handle": "Smart Book Planner", "tier": 2, "automationLevel": "medium", "category": "social" },
+  { "slug": "discord", "name": "Discord", "handle": "community server", "tier": 2, "automationLevel": "manual", "category": "community" },
+  { "slug": "dev-to", "name": "Dev.to", "handle": "build in public", "tier": 3, "automationLevel": "medium", "category": "blog" },
+  { "slug": "hacker-news", "name": "Hacker News", "handle": "Show HN", "tier": 3, "automationLevel": "manual", "category": "community" }
+]

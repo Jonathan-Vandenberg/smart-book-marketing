@@ -2,6 +2,7 @@ import "dotenv/config";
 import { runAnalyticsAgent } from "../src/agents/analytics.ts";
 import { runContentAgent } from "../src/agents/content.ts";
 import { runDailyTipAgent } from "../src/agents/daily-tip.ts";
+import { runPublishAgent } from "../src/agents/publish.ts";
 import { runSignalAgent } from "../src/agents/signal.ts";
 
 const agent = process.argv[2] ?? "all";
@@ -9,6 +10,7 @@ const agent = process.argv[2] ?? "all";
 const agents = {
   signal: runSignalAgent,
   content: runContentAgent,
+  publish: runPublishAgent,
   analytics: runAnalyticsAgent,
   "daily-tip": runDailyTipAgent,
 };

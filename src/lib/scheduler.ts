@@ -2,6 +2,7 @@ import cron from "node-cron";
 import { runAnalyticsAgent } from "@/agents/analytics";
 import { runContentAgent } from "@/agents/content";
 import { runDailyTipAgent } from "@/agents/daily-tip";
+import { runPublishAgent } from "@/agents/publish";
 import { runSignalAgent } from "@/agents/signal";
 import { agentsEnabled, getEnv } from "@/lib/store";
 
@@ -17,6 +18,7 @@ export function startScheduler() {
   const jobs = [
     { name: "signal", expr: getEnv("SIGNAL_CRON", "0 6 * * 1"), fn: runSignalAgent },
     { name: "content", expr: getEnv("CONTENT_CRON", "0 7 * * 1"), fn: runContentAgent },
+    { name: "publish", expr: getEnv("PUBLISH_CRON", "0 8 * * *"), fn: runPublishAgent },
     { name: "analytics", expr: getEnv("ANALYTICS_CRON", "0 6 * * 5"), fn: runAnalyticsAgent },
     { name: "daily-tip", expr: getEnv("DAILY_TIP_CRON", "0 12 * * *"), fn: runDailyTipAgent },
   ];

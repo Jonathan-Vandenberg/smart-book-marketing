@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import { runAnalyticsAgent } from "@/agents/analytics";
 import { runContentAgent } from "@/agents/content";
 import { runDailyTipAgent } from "@/agents/daily-tip";
+import { runPublishAgent } from "@/agents/publish";
 import { runSignalAgent } from "@/agents/signal";
 import { requireAdmin } from "@/lib/auth-guard";
 
 const AGENTS = {
   signal: runSignalAgent,
   content: runContentAgent,
+  publish: runPublishAgent,
   analytics: runAnalyticsAgent,
   "daily-tip": runDailyTipAgent,
 } as const;

@@ -81,6 +81,8 @@ jobs:
             CONTENT_CRON=0 7 * * 1
             ANALYTICS_CRON=0 6 * * 5
             DAILY_TIP_CRON=0 12 * * *
+            PUBLISH_CRON=0 8 * * *
+            BUFFER_ACCESS_TOKEN=${{ secrets.MARKETING_BUFFER_ACCESS_TOKEN }}
             ENVEOF
 
             fuser -k 3001/tcp || true

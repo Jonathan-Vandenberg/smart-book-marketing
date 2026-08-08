@@ -5,6 +5,9 @@ node_modules/
 .next/
 out/
 data/
+data/*.json
+data/*.db
+data/*.db-*
 *.log
 .deploy-key.tmp
 .DS_Store
