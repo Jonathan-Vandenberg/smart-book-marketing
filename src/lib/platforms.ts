@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/db";
+import { resolvePlatformApiConnected } from "@/lib/integrations";
 import type { Platform } from "@/lib/types";
 
 function mapPlatform(row: Record<string, unknown>): Platform {
@@ -21,7 +22,17 @@ export function listPlatforms(): Platform[] {
   const rows = getDb()
     .prepare("SELECT * FROM platforms ORDER BY tier ASC, name ASC")
     .all();
-  return rows.map((row) => mapPlatform(row as Record<string, unknown>));
+  const platforms = rows.map((row) => mapPlatform(row as Record<string, unknown>));
+
+  for (const platform of platforms) {
+    const connected = resolvePlatformApiConnected(platform.slug);
+    if (connected !== platform.apiConnected) {
+      updatePlatformApiConnected(platform.id, connected);
+      platform.apiConnected = connected;
+    }
+  }
+
+  return platforms;
 }
 
 export function getPlatformBySlug(slug: string): Platform | null {
