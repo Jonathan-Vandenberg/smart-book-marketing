@@ -14,6 +14,7 @@ function mapDraft(row: Record<string, unknown>): ContentDraft {
     scheduledAt: (row.scheduled_at as string | null) ?? null,
     publishedAt: (row.published_at as string | null) ?? null,
     externalUrl: (row.external_url as string | null) ?? null,
+    articleUrl: (row.article_url as string | null) ?? null,
     agentSource: (row.agent_source as string | null) ?? null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
@@ -49,11 +50,12 @@ export function createDraft(input: {
   status?: DraftStatus;
   scheduledAt?: string;
   agentSource?: string;
+  articleUrl?: string;
 }): ContentDraft {
   const result = getDb()
     .prepare(
-      `INSERT INTO content_drafts (platform_id, pillar, title, body, status, scheduled_at, agent_source, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+      `INSERT INTO content_drafts (platform_id, pillar, title, body, status, scheduled_at, agent_source, article_url, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
     )
     .run(
       input.platformId,
@@ -63,6 +65,7 @@ export function createDraft(input: {
       input.status ?? "draft",
       input.scheduledAt ?? null,
       input.agentSource ?? null,
+      input.articleUrl ?? null,
     );
 
   const draft = getDraft(Number(result.lastInsertRowid));

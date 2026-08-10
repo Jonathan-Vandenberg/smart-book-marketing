@@ -47,6 +47,11 @@ function migrate(database: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_drafts_status ON content_drafts(status);
     CREATE INDEX IF NOT EXISTS idx_drafts_scheduled ON content_drafts(scheduled_at);
   `);
+
+  const cols = database.prepare("PRAGMA table_info(content_drafts)").all() as Array<{ name: string }>;
+  if (!cols.some((c) => c.name === "article_url")) {
+    database.exec("ALTER TABLE content_drafts ADD COLUMN article_url TEXT");
+  }
 }
 
 function seedPlatforms(database: Database.Database) {
@@ -97,6 +102,17 @@ function ensureGhostPlatform(database: Database.Database) {
     .run();
 }
 
+function ensureFacebookPlatform(database: Database.Database) {
+  const row = database.prepare("SELECT id FROM platforms WHERE slug = 'facebook'").get();
+  if (row) return;
+  database
+    .prepare(
+      `INSERT INTO platforms (slug, name, handle, tier, automation_level, category)
+       VALUES ('facebook', 'Facebook', 'Smart Book Planner', 1, 'medium', 'social')`,
+    )
+    .run();
+}
+
 export function getDb(): Database.Database {
   if (!db) {
     ensureDataDir();
@@ -105,6 +121,7 @@ export function getDb(): Database.Database {
     migrate(db);
     seedPlatforms(db);
     ensureGhostPlatform(db);
+    ensureFacebookPlatform(db);
   }
   return db;
 }

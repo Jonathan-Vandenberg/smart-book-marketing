@@ -1,12 +1,12 @@
 import { auth } from "@/lib/auth";
-import { listPlatforms } from "@/lib/platforms";
+import { listPlatforms, listPlatformsWithLiveStatus } from "@/lib/platforms";
 import { DashboardHeader } from "@/components/dashboard-shell";
 
 export const dynamic = "force-dynamic";
 
 export default async function PlatformsPage() {
   const session = await auth();
-  const platforms = listPlatforms();
+  const platforms = await listPlatformsWithLiveStatus();
 
   const byTier = [1, 2, 3].map((tier) => ({
     tier,
@@ -18,7 +18,8 @@ export default async function PlatformsPage() {
       <DashboardHeader current="/platforms" email={session?.user?.email} />
 
       <p className="muted" style={{ marginBottom: "1.5rem" }}>
-        Registry of marketing channels. Connect APIs via env vars (Buffer, Beehiiv, OpenRouter, GA4).
+        Registry of marketing channels. <strong>Connected</strong> means the API is configured and, for social
+        platforms, a matching channel is linked in Buffer — not just that you have a Buffer token.
       </p>
 
       {byTier.map(({ tier, items }) => (

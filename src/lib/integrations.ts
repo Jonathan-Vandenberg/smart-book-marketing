@@ -32,8 +32,11 @@ export function isOpenRouterConfigured(): boolean {
   return Boolean(getEnv("OPENROUTER_API_KEY"));
 }
 
-/** Live API connection status derived from env vars (not manual DB toggles). */
-export function resolvePlatformApiConnected(slug: string): boolean {
+/** Whether env/API wiring exists. Social platforms also need a linked Buffer channel — pass bufferSlugs from getBufferConnectedPlatformSlugs(). */
+export function resolvePlatformApiConnected(
+  slug: string,
+  bufferConnectedSlugs?: Set<string>,
+): boolean {
   switch (slug) {
     case "google-analytics":
       return isGa4Configured();
@@ -50,7 +53,7 @@ export function resolvePlatformApiConnected(slug: string): boolean {
     case "instagram":
     case "threads":
     case "facebook":
-      return isBufferConfigured();
+      return isBufferConfigured() && Boolean(bufferConnectedSlugs?.has(slug));
     default:
       return false;
   }

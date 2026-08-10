@@ -22,6 +22,21 @@ export type GhostWebhookPost = {
   slug?: string;
 };
 
+export type GhostArticle = {
+  id: string;
+  title: string;
+  url: string;
+  excerpt: string | null;
+  publishedAt: string | null;
+};
+
+function getGhostAdminConfig(): { baseUrl: string; apiKey: string } | null {
+  const baseUrl = getEnv("GHOST_URL")?.replace(/\/$/, "");
+  const apiKey = getEnv("GHOST_ADMIN_API_KEY");
+  if (!baseUrl || !apiKey) return null;
+  return { baseUrl, apiKey };
+}
+
 function createAdminToken(apiKey: string): string {
   const [id, secret] = apiKey.split(":");
   if (!id || !secret) {
@@ -42,19 +57,90 @@ export function bodyToGhostHtml(body: string): string {
     return body;
   }
 
-  const blocks = body.trim().split(/\n\n+/);
-  return blocks
-    .map((block) => {
-      const line = block.trim();
-      if (!line) return "";
-      if (line.startsWith("### ")) return `<h3>${escapeHtml(line.slice(4))}</h3>`;
-      if (line.startsWith("## ")) return `<h2>${escapeHtml(line.slice(3))}</h2>`;
-      if (line.startsWith("# ")) return `<h2>${escapeHtml(line.slice(2))}</h2>`;
-      const inner = escapeHtml(line).replace(/\n/g, "<br>");
-      return `<p>${inner}</p>`;
-    })
-    .filter(Boolean)
-    .join("\n");
+  const lines = body.trim().split("\n");
+  const html: string[] = [];
+  let listItems: string[] = [];
+  let listOrdered = false;
+  let paragraphLines: string[] = [];
+
+  const flushList = () => {
+    if (listItems.length === 0) return;
+    const tag = listOrdered ? "ol" : "ul";
+    html.push(`<${tag}>`);
+    for (const item of listItems) {
+      html.push(`<li>${inlineMarkdown(item)}</li>`);
+    }
+    html.push(`</${tag}>`);
+    listItems = [];
+    listOrdered = false;
+  };
+
+  const flushParagraph = () => {
+    if (paragraphLines.length === 0) return;
+    const text = paragraphLines.join(" ");
+    html.push(`<p>${inlineMarkdown(text)}</p>`);
+    paragraphLines = [];
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) {
+      flushList();
+      flushParagraph();
+      continue;
+    }
+
+    const bullet = line.match(/^[*\-]\s+(.+)$/);
+    const numbered = line.match(/^\d+\.\s+(.+)$/);
+
+    if (bullet) {
+      flushParagraph();
+      if (listItems.length > 0 && listOrdered) flushList();
+      listOrdered = false;
+      listItems.push(bullet[1]);
+      continue;
+    }
+
+    if (numbered) {
+      flushParagraph();
+      if (listItems.length > 0 && !listOrdered) flushList();
+      listOrdered = true;
+      listItems.push(numbered[1]);
+      continue;
+    }
+
+    flushList();
+
+    if (line.startsWith("### ")) {
+      flushParagraph();
+      html.push(`<h3>${inlineMarkdown(line.slice(4))}</h3>`);
+      continue;
+    }
+    if (line.startsWith("## ")) {
+      flushParagraph();
+      html.push(`<h2>${inlineMarkdown(line.slice(3))}</h2>`);
+      continue;
+    }
+    if (line.startsWith("# ")) {
+      flushParagraph();
+      html.push(`<h2>${inlineMarkdown(line.slice(2))}</h2>`);
+      continue;
+    }
+
+    paragraphLines.push(line);
+  }
+
+  flushList();
+  flushParagraph();
+  return html.join("\n");
+}
+
+function inlineMarkdown(text: string): string {
+  let out = escapeHtml(text);
+  out = out.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2">$1</a>');
+  out = out.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  out = out.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, "<em>$1</em>");
+  return out;
 }
 
 function escapeHtml(text: string): string {
@@ -66,16 +152,75 @@ function escapeHtml(text: string): string {
 }
 
 export function isGhostConfigured(): boolean {
-  return Boolean(getEnv("GHOST_URL") && getEnv("GHOST_ADMIN_API_KEY"));
+  return Boolean(getGhostAdminConfig());
+}
+
+/** Most recently published blog post (for social promo drafts). */
+export async function fetchLatestPublishedPost(): Promise<GhostArticle | null> {
+  const config = getGhostAdminConfig();
+  if (!config) return null;
+
+  let token: string;
+  try {
+    token = createAdminToken(config.apiKey);
+  } catch {
+    return null;
+  }
+
+  const params = new URLSearchParams({
+    filter: "status:published",
+    order: "published_at desc",
+    limit: "1",
+    fields: "id,title,url,slug,custom_excerpt,excerpt,published_at",
+  });
+
+  const res = await fetch(`${config.baseUrl}/ghost/api/admin/posts/?${params}`, {
+    headers: {
+      Authorization: `Ghost ${token}`,
+      Accept: "application/json",
+    },
+  });
+
+  if (!res.ok) return null;
+
+  const data = (await res.json()) as {
+    posts?: Array<{
+      id?: string;
+      title?: string;
+      url?: string;
+      slug?: string;
+      custom_excerpt?: string | null;
+      excerpt?: string | null;
+      published_at?: string | null;
+    }>;
+  };
+
+  const post = data.posts?.[0];
+  if (!post?.title) return null;
+
+  const url =
+    post.url ??
+    (post.slug ? `${config.baseUrl}/${post.slug}/` : undefined);
+  if (!url) return null;
+
+  const excerpt = (post.custom_excerpt || post.excerpt || "").replace(/<[^>]+>/g, "").trim() || null;
+
+  return {
+    id: post.id ?? post.slug ?? url,
+    title: post.title,
+    url,
+    excerpt,
+    publishedAt: post.published_at ?? null,
+  };
 }
 
 export async function publishToGhost(input: GhostPublishInput): Promise<GhostPublishResult> {
-  const baseUrl = getEnv("GHOST_URL")?.replace(/\/$/, "");
-  const apiKey = getEnv("GHOST_ADMIN_API_KEY");
-
-  if (!baseUrl || !apiKey) {
+  const config = getGhostAdminConfig();
+  if (!config) {
     return { ok: false, error: "GHOST_URL and GHOST_ADMIN_API_KEY not configured" };
   }
+  const baseUrl = config.baseUrl;
+  const apiKey = config.apiKey;
 
   let token: string;
   try {

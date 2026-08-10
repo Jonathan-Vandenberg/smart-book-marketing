@@ -193,3 +193,25 @@ export async function listBufferChannels(): Promise<
 
   return result.data?.channels ?? [];
 }
+
+/** Map Buffer channel service id → marketing platform slug. */
+export function bufferServiceToPlatformSlug(service: string): string {
+  switch (service) {
+    case "twitter":
+      return "x";
+    default:
+      return service;
+  }
+}
+
+/** Platform slugs with an active channel in Buffer (empty if token missing or API fails). */
+export async function getBufferConnectedPlatformSlugs(): Promise<Set<string>> {
+  if (!getEnv("BUFFER_ACCESS_TOKEN")) return new Set();
+
+  try {
+    const channels = await listBufferChannels();
+    return new Set(channels.map((c) => bufferServiceToPlatformSlug(c.service)));
+  } catch {
+    return new Set();
+  }
+}

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createDraft, deleteDraft, updateDraftStatus } from "@/lib/drafts";
 import { runContentAgent } from "@/agents/content";
 import { publishDraftById, runPublishAgent } from "@/agents/publish";
+import { createBlogPromoDrafts } from "@/lib/blog-promo";
 
 export async function approveDraftAction(formData: FormData) {
   const id = Number(formData.get("draftId"));
@@ -81,6 +82,19 @@ export async function publishDraftNowAction(formData: FormData) {
     redirect(`/drafts?status=published&published=${id}`);
   }
   redirect(`/drafts?publishError=${encodeURIComponent(result.error ?? "Publish failed")}`);
+}
+
+export async function createBlogPromoDraftsAction() {
+  const result = await createBlogPromoDrafts();
+  revalidatePath("/drafts");
+  revalidatePath("/");
+
+  if (result.ok) {
+    redirect(
+      `/drafts?promoCreated=${result.created}&promoTitle=${encodeURIComponent(result.articleTitle ?? "")}`,
+    );
+  }
+  redirect(`/drafts?promoError=${encodeURIComponent(result.error ?? "Could not create promo drafts")}`);
 }
 
 export async function runContentAgentAction() {

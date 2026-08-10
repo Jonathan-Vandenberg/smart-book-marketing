@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/db";
+import { getBufferConnectedPlatformSlugs } from "@/lib/buffer";
 import { resolvePlatformApiConnected } from "@/lib/integrations";
 import type { Platform } from "@/lib/types";
 
@@ -22,10 +23,19 @@ export function listPlatforms(): Platform[] {
   const rows = getDb()
     .prepare("SELECT * FROM platforms ORDER BY tier ASC, name ASC")
     .all();
+  return rows.map((row) => mapPlatform(row as Record<string, unknown>));
+}
+
+/** Platforms with live Buffer channel status synced to the database. */
+export async function listPlatformsWithLiveStatus(): Promise<Platform[]> {
+  const bufferSlugs = await getBufferConnectedPlatformSlugs();
+  const rows = getDb()
+    .prepare("SELECT * FROM platforms ORDER BY tier ASC, name ASC")
+    .all();
   const platforms = rows.map((row) => mapPlatform(row as Record<string, unknown>));
 
   for (const platform of platforms) {
-    const connected = resolvePlatformApiConnected(platform.slug);
+    const connected = resolvePlatformApiConnected(platform.slug, bufferSlugs);
     if (connected !== platform.apiConnected) {
       updatePlatformApiConnected(platform.id, connected);
       platform.apiConnected = connected;

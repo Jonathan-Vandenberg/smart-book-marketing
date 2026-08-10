@@ -4,6 +4,8 @@ import { appendAgentRun } from "@/lib/store";
 import { pickComparisonTopic } from "@/lib/competitors";
 import { createDraft } from "@/lib/drafts";
 import { listPlatforms } from "@/lib/platforms";
+import { isGhostConfigured } from "@/lib/ghost";
+import { getBufferConnectedPlatformSlugs } from "@/lib/buffer";
 import { generateBlogPost, generateMarketingPost } from "@/lib/openrouter";
 
 const TOPICS = [
@@ -27,9 +29,17 @@ function pickTopic(index: number) {
 
 export async function runContentAgent() {
   try {
-    const platforms = listPlatforms().filter((p) => ["x", "linkedin", "ghost"].includes(p.slug));
+    const bufferSlugs = await getBufferConnectedPlatformSlugs();
+    const platforms = listPlatforms().filter((p) => {
+      if (p.slug === "ghost") return isGhostConfigured();
+      return bufferSlugs.has(p.slug);
+    });
     if (platforms.length === 0) {
-      return appendAgentRun({ agent: "content", status: "skipped", message: "No target platforms found" });
+      return appendAgentRun({
+        agent: "content",
+        status: "skipped",
+        message: "No publishable platforms — connect Ghost and/or link channels in Buffer.",
+      });
     }
 
     const pillarsPath = path.join(process.cwd(), "config", "content-pillars.json");

@@ -1,6 +1,7 @@
 [
   { "slug": "x", "name": "X (Twitter)", "handle": "@SmartBookPlanner", "tier": 1, "automationLevel": "high", "category": "social" },
   { "slug": "linkedin", "name": "LinkedIn", "handle": "Smart Book Planner", "tier": 1, "automationLevel": "medium", "category": "social" },
+  { "slug": "facebook", "name": "Facebook", "handle": "Smart Book Planner", "tier": 1, "automationLevel": "medium", "category": "social" },
   { "slug": "reddit", "name": "Reddit", "handle": "u/SmartBookPlanner", "tier": 1, "automationLevel": "manual", "category": "community" },
   { "slug": "indie-hackers", "name": "Indie Hackers", "handle": "founder profile", "tier": 1, "automationLevel": "medium", "category": "community" },
   { "slug": "ghost", "name": "Ghost Blog", "handle": "blog.smartbookplanner.com", "tier": 1, "automationLevel": "high", "category": "blog" },

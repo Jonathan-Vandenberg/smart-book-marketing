@@ -26,6 +26,7 @@ export type ContentDraft = {
   scheduledAt: string | null;
   publishedAt: string | null;
   externalUrl: string | null;
+  articleUrl: string | null;
   agentSource: string | null;
   createdAt: string;
   updatedAt: string;
