@@ -1,11 +1,13 @@
 import { appendAgentRun } from "@/lib/store";
-import { listDrafts, updateDraftStatus } from "@/lib/drafts";
+import { getDraft, listDrafts, updateDraftStatus } from "@/lib/drafts";
 import { publishToBuffer } from "@/lib/buffer";
 import { bodyToGhostHtml, publishToGhost } from "@/lib/ghost";
 
 const BUFFER_PLATFORMS = new Set(["x", "linkedin", "instagram", "threads", "facebook"]);
 
-async function publishDraft(draft: { id: number; platformSlug: string; title: string | null; body: string }) {
+type DraftToPublish = { id: number; platformSlug: string; title: string | null; body: string };
+
+async function publishDraft(draft: DraftToPublish) {
   if (draft.platformSlug === "ghost") {
     const html = bodyToGhostHtml(draft.body);
     const title =
@@ -21,6 +23,37 @@ async function publishDraft(draft: { id: number; platformSlug: string; title: st
   }
 
   return { ok: false, error: `No publisher configured for platform: ${draft.platformSlug}` };
+}
+
+export async function publishDraftById(id: number): Promise<{ ok: boolean; error?: string; url?: string }> {
+  const draft = getDraft(id);
+  if (!draft) {
+    return { ok: false, error: "Draft not found" };
+  }
+  if (draft.status !== "approved" && draft.status !== "scheduled") {
+    return { ok: false, error: `Draft must be approved or scheduled (current: ${draft.status})` };
+  }
+
+  const result = await publishDraft(draft);
+  if (result.ok) {
+    updateDraftStatus(draft.id, "published", {
+      publishedAt: new Date().toISOString(),
+      externalUrl: result.url,
+    });
+    await appendAgentRun({
+      agent: "publish",
+      status: "ok",
+      message: `Published draft #${draft.id} (${draft.platformSlug}) immediately.`,
+    });
+    return { ok: true, url: result.url };
+  }
+
+  await appendAgentRun({
+    agent: "publish",
+    status: "error",
+    message: `Publish now failed for draft #${draft.id}: ${result.error ?? "unknown"}`,
+  });
+  return { ok: false, error: result.error };
 }
 
 export async function runPublishAgent() {

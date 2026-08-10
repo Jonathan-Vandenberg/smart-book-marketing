@@ -1,9 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createDraft, deleteDraft, updateDraftStatus } from "@/lib/drafts";
 import { runContentAgent } from "@/agents/content";
-import { runPublishAgent } from "@/agents/publish";
+import { publishDraftById, runPublishAgent } from "@/agents/publish";
 
 export async function approveDraftAction(formData: FormData) {
   const id = Number(formData.get("draftId"));
@@ -64,6 +65,22 @@ export async function createDraftAction(formData: FormData) {
   revalidatePath("/drafts");
   revalidatePath("/");
   revalidatePath("/calendar");
+}
+
+export async function publishDraftNowAction(formData: FormData) {
+  const id = Number(formData.get("draftId"));
+  if (!id) return;
+
+  const result = await publishDraftById(id);
+  revalidatePath("/drafts");
+  revalidatePath("/");
+  revalidatePath("/agents");
+  revalidatePath("/calendar");
+
+  if (result.ok) {
+    redirect(`/drafts?status=published&published=${id}`);
+  }
+  redirect(`/drafts?publishError=${encodeURIComponent(result.error ?? "Publish failed")}`);
 }
 
 export async function runContentAgentAction() {

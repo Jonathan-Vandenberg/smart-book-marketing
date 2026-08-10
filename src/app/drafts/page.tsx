@@ -8,6 +8,7 @@ import {
   scheduleDraftAction,
   deleteDraftAction,
   createDraftAction,
+  publishDraftNowAction,
 } from "@/app/actions/drafts";
 
 export const dynamic = "force-dynamic";
@@ -16,13 +17,30 @@ import type { DraftStatus } from "@/lib/types";
 
 const STATUSES: DraftStatus[] = ["draft", "approved", "scheduled", "published", "rejected"];
 
+const BUFFER_PLATFORMS = new Set(["x", "linkedin", "instagram", "threads", "facebook"]);
+
+function approvedPublishHint(platformSlug: string): string {
+  if (platformSlug === "ghost") {
+    return "Approved — use Publish Now or wait for the publish agent (Ghost blog; social link share via webhook after go-live).";
+  }
+  if (BUFFER_PLATFORMS.has(platformSlug)) {
+    return "Approved — use Publish Now or wait for the publish agent (Buffer).";
+  }
+  return "Approved — use Publish Now or wait for the publish agent.";
+}
+
+function canPublishNow(status: DraftStatus): boolean {
+  return status === "approved" || status === "scheduled";
+}
+
 export default async function DraftsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; publishError?: string; published?: string }>;
 }) {
   const session = await auth();
-  const { status: rawStatus } = await searchParams;
+  const params = await searchParams;
+  const { status: rawStatus, publishError, published } = params;
   const status = STATUSES.includes(rawStatus as DraftStatus) ? (rawStatus as DraftStatus) : undefined;
   const drafts = listDrafts(status);
   const platforms = listPlatforms();
@@ -76,6 +94,13 @@ export default async function DraftsPage({
           </div>
         </div>
 
+        {publishError && (
+          <p className="badge error" style={{ marginBottom: "1rem" }}>Publish failed: {publishError}</p>
+        )}
+        {published && (
+          <p className="badge ok" style={{ marginBottom: "1rem" }}>Draft #{published} published successfully.</p>
+        )}
+
         {drafts.length === 0 ? (
           <p className="muted">No drafts yet.</p>
         ) : (
@@ -116,7 +141,26 @@ export default async function DraftsPage({
               )}
 
               {draft.status === "approved" && (
-                <p className="muted">Approved — publish agent will send to Buffer on next run.</p>
+                <p className="muted">{approvedPublishHint(draft.platformSlug)}</p>
+              )}
+
+              {canPublishNow(draft.status) && (
+                <div className="inline-actions" style={{ marginTop: "0.5rem" }}>
+                  <form action={publishDraftNowAction}>
+                    <input type="hidden" name="draftId" value={draft.id} />
+                    <button type="submit" className="btn btn-primary btn-sm">Publish Now</button>
+                  </form>
+                </div>
+              )}
+
+              {draft.status === "published" && draft.externalUrl && (
+                <p className="muted" style={{ marginTop: "0.5rem" }}>
+                  Published: {draft.externalUrl.startsWith("http") ? (
+                    <a href={draft.externalUrl} target="_blank" rel="noreferrer">{draft.externalUrl}</a>
+                  ) : (
+                    draft.externalUrl
+                  )}
+                </p>
               )}
             </article>
           ))
