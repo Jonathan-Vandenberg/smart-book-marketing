@@ -86,6 +86,17 @@ function seedPlatforms(database: Database.Database) {
   tx(seeds);
 }
 
+function ensureGhostPlatform(database: Database.Database) {
+  const row = database.prepare("SELECT id FROM platforms WHERE slug = 'ghost'").get();
+  if (row) return;
+  database
+    .prepare(
+      `INSERT INTO platforms (slug, name, handle, tier, automation_level, category)
+       VALUES ('ghost', 'Ghost Blog', 'blog.smartbookplanner.com', 1, 'high', 'blog')`,
+    )
+    .run();
+}
+
 export function getDb(): Database.Database {
   if (!db) {
     ensureDataDir();
@@ -93,6 +104,7 @@ export function getDb(): Database.Database {
     db.pragma("journal_mode = WAL");
     migrate(db);
     seedPlatforms(db);
+    ensureGhostPlatform(db);
   }
   return db;
 }

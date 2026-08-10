@@ -14,3 +14,4 @@ data/*.db-*
 service-account-key.json
 *.pem
 *.key
+tsconfig.tsbuildinfo

@@ -4,7 +4,7 @@ import { appendAgentRun } from "@/lib/store";
 import { pickComparisonTopic } from "@/lib/competitors";
 import { createDraft } from "@/lib/drafts";
 import { listPlatforms } from "@/lib/platforms";
-import { generateMarketingPost } from "@/lib/openrouter";
+import { generateBlogPost, generateMarketingPost } from "@/lib/openrouter";
 
 const TOPICS = [
   { pillar: "craft-fiction", topic: "Map your plot on 7 points before chapter one" },
@@ -27,7 +27,7 @@ function pickTopic(index: number) {
 
 export async function runContentAgent() {
   try {
-    const platforms = listPlatforms().filter((p) => ["x", "linkedin", "beehiiv"].includes(p.slug));
+    const platforms = listPlatforms().filter((p) => ["x", "linkedin", "ghost"].includes(p.slug));
     if (platforms.length === 0) {
       return appendAgentRun({ agent: "content", status: "skipped", message: "No target platforms found" });
     }
@@ -41,16 +41,24 @@ export async function runContentAgent() {
     for (const platform of platforms) {
       const pick = pickTopic(created);
       const pillarLabel = pillars.find((p) => p.id === pick.pillar)?.label ?? pick.pillar;
-      const body = await generateMarketingPost({
-        platformName: platform.name,
-        pillar: pillarLabel,
-        topic: pick.topic,
-      });
+      const body =
+        platform.slug === "ghost"
+          ? await generateBlogPost({ pillar: pillarLabel, topic: pick.topic })
+          : await generateMarketingPost({
+              platformName: platform.name,
+              pillar: pillarLabel,
+              topic: pick.topic,
+            });
+
+      const title =
+        platform.slug === "ghost"
+          ? body.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? pick.topic
+          : pick.topic;
 
       createDraft({
         platformId: platform.id,
         body,
-        title: pick.topic,
+        title,
         pillar: pick.pillar,
         agentSource: "content-agent",
       });

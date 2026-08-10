@@ -39,11 +39,11 @@ rsync -avz -e "$RSYNC_SSH" --delete \
   "${LOCAL_DIR}/ecosystem.config.js" \
   "${DO_USER}@${DO_HOST}:${REMOTE_DIR}/"
 
-rsync -avz -e "$RSYNC_SSH" "${LOCAL_DIR}/node_modules/" "${DO_USER}@${DO_HOST}:${REMOTE_DIR}/node_modules/"
-
 "${SSH_CMD[@]}" "${DO_USER}@${DO_HOST}" bash -s <<'EOF'
 set -euo pipefail
 cd /var/www/smart-book-marketing
+echo "→ Installing deps on server (native modules must compile for Linux — do not rsync node_modules from Mac)..."
+npm ci
 mkdir -p data
 fuser -k 3001/tcp || true
 sleep 1

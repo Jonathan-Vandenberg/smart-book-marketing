@@ -44,5 +44,6 @@ DO_HOST=209.97.163.64 DO_USER=root DO_KEY=~/.ssh/your_key ./scripts/deploy.sh
 ## Docs
 
 - [Agentic marketing playbook](./docs/marketing/agentic-marketing-playbook.md)
+- [Ghost blog setup](./docs/ghost-setup.md) — `blog.smartbookplanner.com`
 - [PLAN.md](./PLAN.md) — DNS, nginx, SSL, secrets
 # smart-book-marketing

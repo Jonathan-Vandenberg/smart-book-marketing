@@ -45,3 +45,53 @@ export async function generateMarketingPost(input: {
   const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
   return data.choices?.[0]?.message?.content?.trim() || input.topic;
 }
+
+export async function generateBlogPost(input: {
+  pillar: string;
+  topic: string;
+}): Promise<string> {
+  const apiKey = getEnv("OPENROUTER_API_KEY");
+  const brandVoicePath = path.join(process.cwd(), "config", "brand-voice.md");
+  const brandVoice = fs.existsSync(brandVoicePath)
+    ? fs.readFileSync(brandVoicePath, "utf8")
+    : "";
+
+  if (!apiKey) {
+    return `# ${input.topic}\n\n${input.topic}\n\nStart your manuscript → https://smartbookplanner.com`;
+  }
+
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://marketing.smartbookplanner.com",
+      "X-Title": "Smart Book Marketing",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: brandVoice },
+        {
+          role: "user",
+          content: `Write an SEO blog article for Smart Book Planner about: ${input.topic} (pillar: ${input.pillar}).
+
+Requirements:
+- 600–900 words
+- Use markdown: one # title, ## subheadings, short paragraphs
+- Practical advice for novelists, memoirists, or researchers
+- Mention Smart Book Planner naturally once near the end
+- CTA: Start your manuscript → https://smartbookplanner.com`,
+        },
+      ],
+      max_tokens: 2000,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`OpenRouter error: ${res.status}`);
+  }
+
+  const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  return data.choices?.[0]?.message?.content?.trim() || input.topic;
+}

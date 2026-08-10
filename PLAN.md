@@ -15,8 +15,9 @@ Oracle Cloud is optional (instance limit reached). Jazz-practice-agent stays on 
 | Smart Book Planner app | `rogan-writer` | 3000 | `smartbookplanner.com` |
 | Smart Book Planner landing | (same process) | 3000 | `www.smartbookplanner.com` |
 | **Marketing dashboard** | `smart-book-marketing` | **3001** | **`marketing.smartbookplanner.com`** |
+| **Ghost blog** | `ghost` (systemd) | **2368** | **`blog.smartbookplanner.com`** |
 
-Both apps share one droplet, separate PM2 processes, nginx routes by hostname.
+Both Next.js apps share one droplet, separate PM2 processes, nginx routes by hostname. Ghost runs via Ghost CLI systemd — see [docs/ghost-setup.md](./docs/ghost-setup.md).
 
 ---
 
@@ -69,6 +70,9 @@ Push to `main` auto-deploys via `.github/workflows/deploy-production.yml`.
 - `MARKETING_DASHBOARD_SECRET` — long random string (protects `/api/agents/run`)
 - `MARKETING_OPENROUTER_API_KEY` — optional, for content agents
 - `MARKETING_GA4_PROPERTY_ID` — optional, for analytics agent
+- `MARKETING_BUFFER_ACCESS_TOKEN` — Buffer social publishing
+- `MARKETING_GHOST_ADMIN_API_KEY` — Ghost Admin API key (`id:secret`)
+- `MARKETING_GHOST_WEBHOOK_SECRET` — webhook query secret for Ghost → Buffer
 
 ---
 

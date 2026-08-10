@@ -20,6 +20,10 @@ export function isBufferConfigured(): boolean {
   return Boolean(getEnv("BUFFER_ACCESS_TOKEN"));
 }
 
+export function isGhostConfigured(): boolean {
+  return Boolean(getEnv("GHOST_URL") && getEnv("GHOST_ADMIN_API_KEY"));
+}
+
 export function isBeehiivConfigured(): boolean {
   return Boolean(getEnv("BEEHIIV_API_KEY"));
 }
@@ -35,6 +39,8 @@ export function resolvePlatformApiConnected(slug: string): boolean {
       return isGa4Configured();
     case "search-console":
       return isGscConfigured();
+    case "ghost":
+      return isGhostConfigured();
     case "buffer":
       return isBufferConfigured();
     case "beehiiv":
@@ -43,6 +49,7 @@ export function resolvePlatformApiConnected(slug: string): boolean {
     case "linkedin":
     case "instagram":
     case "threads":
+    case "facebook":
       return isBufferConfigured();
     default:
       return false;
@@ -69,7 +76,12 @@ export function listIntegrationStatus() {
     {
       name: "Buffer",
       configured: isBufferConfigured(),
-      note: "BUFFER_ACCESS_TOKEN",
+      note: "BUFFER_ACCESS_TOKEN — GraphQL API at api.buffer.com (X, LinkedIn, etc.)",
+    },
+    {
+      name: "Ghost",
+      configured: isGhostConfigured(),
+      note: "GHOST_URL + GHOST_ADMIN_API_KEY — blog + newsletter",
     },
   ];
 }

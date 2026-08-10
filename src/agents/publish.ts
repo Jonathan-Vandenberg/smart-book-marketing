@@ -1,6 +1,27 @@
 import { appendAgentRun } from "@/lib/store";
 import { listDrafts, updateDraftStatus } from "@/lib/drafts";
 import { publishToBuffer } from "@/lib/buffer";
+import { bodyToGhostHtml, publishToGhost } from "@/lib/ghost";
+
+const BUFFER_PLATFORMS = new Set(["x", "linkedin", "instagram", "threads", "facebook"]);
+
+async function publishDraft(draft: { id: number; platformSlug: string; title: string | null; body: string }) {
+  if (draft.platformSlug === "ghost") {
+    const html = bodyToGhostHtml(draft.body);
+    const title =
+      draft.title ??
+      draft.body.match(/^#\s+(.+)$/m)?.[1]?.trim() ??
+      "Smart Book Planner";
+    return publishToGhost({ title, html, status: "published", tags: ["smart-book-planner"] });
+  }
+
+  if (BUFFER_PLATFORMS.has(draft.platformSlug)) {
+    const result = await publishToBuffer(draft.body);
+    return { ok: result.ok, id: result.id, url: result.id ? `buffer:${result.id}` : undefined, error: result.error };
+  }
+
+  return { ok: false, error: `No publisher configured for platform: ${draft.platformSlug}` };
+}
 
 export async function runPublishAgent() {
   try {
@@ -21,11 +42,11 @@ export async function runPublishAgent() {
     const errors: string[] = [];
 
     for (const draft of queue) {
-      const result = await publishToBuffer(draft.body);
+      const result = await publishDraft(draft);
       if (result.ok) {
         updateDraftStatus(draft.id, "published", {
           publishedAt: new Date().toISOString(),
-          externalUrl: result.id ? `buffer:${result.id}` : undefined,
+          externalUrl: result.url,
         });
         published += 1;
       } else {
@@ -36,7 +57,7 @@ export async function runPublishAgent() {
     const message =
       published > 0
         ? `Published ${published} draft(s)${errors.length ? `; ${errors.length} failed` : ""}.`
-        : `Publish failed — ${errors[0] ?? "configure BUFFER_ACCESS_TOKEN"}`;
+        : `Publish failed — ${errors[0] ?? "configure BUFFER_ACCESS_TOKEN or GHOST_ADMIN_API_KEY"}`;
 
     console.log(`[publish] ${message}`);
     return appendAgentRun({
@@ -49,4 +70,13 @@ export async function runPublishAgent() {
     console.error("[publish]", message);
     return appendAgentRun({ agent: "publish", status: "error", message });
   }
+}
+
+export async function shareGhostPostToBuffer(post: { title?: string; url?: string }) {
+  if (!post.url) {
+    return { ok: false, error: "No post URL" };
+  }
+  const title = post.title ?? "New on the Smart Book Planner blog";
+  const text = `${title}\n\n${post.url}\n\nPlan your manuscript → https://smartbookplanner.com`;
+  return publishToBuffer(text, undefined, "shareNow");
 }
