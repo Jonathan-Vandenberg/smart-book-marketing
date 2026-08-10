@@ -21,13 +21,13 @@ Full steps: **[PLAN.md](./PLAN.md)**
 
 | Branch | Deploys? | Use for |
 |--------|----------|---------|
-| `dev` | No — CI only | Day-to-day development |
-| `qa` | No — CI only | Pre-release review |
+| `dev` | No | Day-to-day development |
+| `qa` | No | Pre-release review |
 | `main` | Yes → production | Stable releases only |
 
 Flow: `dev` → merge to `qa` → merge to `main` (triggers deploy to marketing.smartbookplanner.com).
 
-**GitHub Actions:** push to `main` deploys automatically. Use **Actions → Deploy to Production → Run workflow** for a manual redeploy without a commit.
+**GitHub Actions:** only `main` — push triggers **Deploy to Production** (build + typecheck + deploy). Use **Actions → Deploy to Production → Run workflow** for a manual redeploy.
 
 **Manual deploy:**
 ```bash

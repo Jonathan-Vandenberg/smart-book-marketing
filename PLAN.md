@@ -23,15 +23,15 @@ Both Next.js apps share one droplet, separate PM2 processes, nginx routes by hos
 
 ## Git branches
 
-| Branch | CI (build + typecheck) | Production deploy |
-|--------|------------------------|-------------------|
-| `dev` | Yes | No |
-| `qa` | Yes | No |
-| `main` | Yes | Yes (push or manual workflow) |
+| Branch | GitHub Actions | Production deploy |
+|--------|----------------|-------------------|
+| `dev` | No | No |
+| `qa` | No | No |
+| `main` | Yes — build, typecheck, deploy | Yes (push or manual workflow) |
 
 **Default workflow:** develop on `dev` → merge to `qa` for review → merge to `main` to release.
 
-Only `main` triggers **Deploy to Production**. Pushes to `dev`/`qa` run **CI** only.
+Only `main` runs GitHub Actions (**Deploy to Production**). Run `npm run typecheck && npm run build` locally on `dev`/`qa` before merging.
 
 ---
 
