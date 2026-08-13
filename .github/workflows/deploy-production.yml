@@ -87,6 +87,8 @@ jobs:
             GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
             PRODUCT_URL=https://smartbookplanner.com
             PRODUCT_NAME=Smart Book Planner
+            PRODUCT_API_URL=https://smartbookplanner.com
+            PRODUCT_ADMIN_SECRET=${{ secrets.ADMIN_API_SECRET }}
             OPENROUTER_API_KEY=${{ secrets.MARKETING_OPENROUTER_API_KEY }}
             GA4_PROPERTY_ID=${{ secrets.MARKETING_GA4_PROPERTY_ID }}
             GOOGLE_SERVICE_ACCOUNT_KEY_PATH=./service-account-key.json

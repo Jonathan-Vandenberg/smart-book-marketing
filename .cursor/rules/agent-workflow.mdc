@@ -1,0 +1,36 @@
+---
+description: Mandatory agent workflow — graphify exploration + caveman output (AI-only, not user)
+alwaysApply: true
+---
+
+# Agent workflow (you — not the user)
+
+These tools exist for **you**, the agent. Do not tell the user to run graphify or enable caveman. You use them automatically every session.
+
+## Graphify — codebase exploration
+
+**Before** Read, Grep, Glob, or Bash to explore architecture or find code in this repo:
+
+1. `graphify query "<question>"` — scoped subgraph
+2. `graphify path "<symbol A>" "<symbol B>"` — dependency path
+3. `graphify explain "<concept>"` — related nodes
+
+**After** modifying any source file in this repo:
+
+- Run `graphify update .` from repo root (AST-only, no API cost)
+
+**If** `graphify-out/graph.json` does not exist: run `graphify update .` first, then query.
+
+**Subagents:** Every subagent prompt that explores code MUST include: run graphify before Read/Grep/Glob.
+
+Only skip graphify when editing specific lines you already located.
+
+## Caveman — default communication
+
+Default style: **caveman full** per `.agents/skills/caveman/SKILL.md`.
+
+- Terse, no filler, full technical accuracy
+- Persist every response until user says **"normal mode"** or **"stop caveman"**
+- Security warnings and irreversible confirmations: clear prose OK, then resume caveman
+
+User does not need to ask for caveman or graphify. You apply both unless explicitly disabled.

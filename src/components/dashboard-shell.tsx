@@ -7,6 +7,9 @@ const links = [
   { href: "/platforms", label: "Platforms" },
   { href: "/analytics", label: "Analytics" },
   { href: "/agents", label: "Agents" },
+  { href: "/users", label: "Users" },
+  { href: "/credits", label: "Credits" },
+  { href: "/models", label: "Models" },
 ];
 
 export function DashboardNav({ current }: { current: string }) {

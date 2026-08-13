@@ -1,0 +1,8 @@
+# Extra exclusions beyond .gitignore (merged; these patterns win on conflict).
+# graphify already respects .gitignore for node_modules/, .next/, data/, etc.
+
+# Generated / local-only graphify artifacts
+graphify-out/
+
+# Local runtime data
+data/

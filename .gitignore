@@ -15,3 +15,8 @@ service-account-key.json
 *.pem
 *.key
 tsconfig.tsbuildinfo
+
+# graphify (https://github.com/Graphify-Labs/graphify) — local knowledge graph (never commit)
+graphify-out/
+.graphify/
+raw/
