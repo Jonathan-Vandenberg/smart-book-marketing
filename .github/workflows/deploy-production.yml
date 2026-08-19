@@ -98,6 +98,12 @@ jobs:
             ANALYTICS_CRON=0 6 * * 5
             DAILY_TIP_CRON=0 12 * * *
             PUBLISH_CRON=0 8 * * *
+            BLOG_CRON=0 9 * * *
+            BLOG_AUTO_PUBLISH=true
+            BLOG_AI_MODEL=x-ai/grok-4.20
+            BLOG_IMAGE_MODEL=google/gemini-3.1-flash-image-preview
+            NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+            SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
             BUFFER_ACCESS_TOKEN=${{ secrets.MARKETING_BUFFER_ACCESS_TOKEN }}
             BUFFER_ORGANIZATION_ID=6a7956b2db79c7bd2918feee
             BUFFER_CHANNEL_IDS=6a7967ffb2d9d577434c0aba

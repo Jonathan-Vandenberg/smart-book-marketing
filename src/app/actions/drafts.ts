@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createDraft, deleteDraft, updateDraftStatus } from "@/lib/drafts";
 import { runContentAgent } from "@/agents/content";
+import { runBlogAgent } from "@/agents/blog";
 import { publishDraftById, runPublishAgent } from "@/agents/publish";
 import { createBlogPromoDrafts } from "@/lib/blog-promo";
 
@@ -107,6 +108,12 @@ export async function runContentAgentAction() {
 export async function runPublishAgentAction() {
   await runPublishAgent();
   revalidatePath("/drafts");
+  revalidatePath("/agents");
+  revalidatePath("/");
+}
+
+export async function runBlogAgentAction() {
+  await runBlogAgent();
   revalidatePath("/agents");
   revalidatePath("/");
 }

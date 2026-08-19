@@ -9,9 +9,13 @@
     "start": "next start --port 3001",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "agents:run-once": "node --import tsx scripts/run-agents-once.mjs"
+    "agents:run-once": "node --import tsx scripts/run-agents-once.mjs",
+    "blog:run-once": "node --import tsx scripts/run-blog-cron-once.mjs",
+    "ghost:setup-seo": "node --import tsx scripts/setup-ghost-seo.mjs",
+    "ghost:backfill-seo": "node --import tsx scripts/backfill-ghost-seo.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.109.0",
     "@tryghost/admin-api": "^1.14.11",
     "better-sqlite3": "^12.11.1",
     "dotenv": "^17.4.2",
@@ -20,7 +24,8 @@
     "next-auth": "^5.0.0-beta.25",
     "node-cron": "^4.6.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "ws": "^8.21.3"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0",
@@ -28,6 +33,7 @@
     "@types/node": "^22.15.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
+    "@types/ws": "^8.18.1",
     "tsx": "^4.19.0",
     "typescript": "^5.8.0"
   },

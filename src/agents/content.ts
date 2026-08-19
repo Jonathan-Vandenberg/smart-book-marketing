@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { appendAgentRun } from "@/lib/store";
+import { appendAgentRun, getEnv } from "@/lib/store";
 import { pickComparisonTopic } from "@/lib/competitors";
 import { createDraft } from "@/lib/drafts";
 import { listPlatforms } from "@/lib/platforms";
@@ -30,8 +30,12 @@ function pickTopic(index: number) {
 export async function runContentAgent() {
   try {
     const bufferSlugs = await getBufferConnectedPlatformSlugs();
+    const blogAutoPublish = getEnv("BLOG_AUTO_PUBLISH", "true") === "true";
     const platforms = listPlatforms().filter((p) => {
-      if (p.slug === "ghost") return isGhostConfigured();
+      if (p.slug === "ghost") {
+        if (blogAutoPublish) return false;
+        return isGhostConfigured();
+      }
       return bufferSlugs.has(p.slug);
     });
     if (platforms.length === 0) {

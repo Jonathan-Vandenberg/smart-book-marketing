@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { getAgentRuns, agentsEnabled, getEnv } from "@/lib/store";
 import { DashboardHeader } from "@/components/dashboard-shell";
-import { runContentAgentAction, runPublishAgentAction } from "@/app/actions/drafts";
+import { runContentAgentAction, runPublishAgentAction, runBlogAgentAction } from "@/app/actions/drafts";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,8 @@ export default async function AgentsPage() {
 
   const cronJobs = [
     { name: "Signal", expr: getEnv("SIGNAL_CRON", "0 6 * * 1"), desc: "GSC + topic briefs" },
-    { name: "Content", expr: getEnv("CONTENT_CRON", "0 7 * * 1"), desc: "Generate drafts → review queue" },
+    { name: "Content", expr: getEnv("CONTENT_CRON", "0 7 * * 1"), desc: "Social drafts → review queue" },
+    { name: "Blog", expr: getEnv("BLOG_CRON", "0 9 * * *"), desc: "Trending → Ghost publish + backlinks + image" },
     { name: "Publish", expr: getEnv("PUBLISH_CRON", "0 8 * * *"), desc: "Approved/due → Buffer" },
     { name: "Analytics", expr: getEnv("ANALYTICS_CRON", "0 6 * * 5"), desc: "Weekly report" },
     { name: "Daily tip", expr: getEnv("DAILY_TIP_CRON", "0 12 * * *"), desc: "Short post slot" },
@@ -35,6 +36,9 @@ export default async function AgentsPage() {
             </form>
             <form action={runPublishAgentAction}>
               <button type="submit" className="btn btn-sm">Publish agent</button>
+            </form>
+            <form action={runBlogAgentAction}>
+              <button type="submit" className="btn btn-sm">Blog cron (Ghost)</button>
             </form>
           </div>
         </div>
