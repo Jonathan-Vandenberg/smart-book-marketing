@@ -394,6 +394,54 @@ export async function listPublishedGhostPostsForSeo(limit = "all"): Promise<Ghos
     }));
 }
 
+/** Update title, HTML, and SEO fields on an existing post. */
+export async function updateGhostPostContent(input: {
+  id: string;
+  updatedAt: string;
+  title?: string;
+  html?: string;
+  customExcerpt?: string;
+  metaTitle?: string;
+  metaDescription?: string;
+}): Promise<GhostPublishResult> {
+  const payload: Record<string, unknown> = {
+    id: input.id,
+    updated_at: input.updatedAt,
+  };
+
+  if (input.title) payload.title = input.title;
+  if (input.html) payload.html = input.html;
+  if (input.customExcerpt !== undefined) payload.custom_excerpt = input.customExcerpt;
+  if (input.metaTitle !== undefined) payload.meta_title = input.metaTitle;
+  if (input.metaDescription !== undefined) payload.meta_description = input.metaDescription;
+
+  const endpoint = input.html
+    ? `/ghost/api/admin/posts/${input.id}/?source=html`
+    : `/ghost/api/admin/posts/${input.id}/`;
+
+  const res = await ghostAdminRequest(endpoint, {
+    method: "PUT",
+    body: JSON.stringify({ posts: [payload] }),
+  });
+
+  if (!res) {
+    return { ok: false, error: "GHOST_URL and GHOST_ADMIN_API_KEY not configured" };
+  }
+  if (!res.ok) {
+    const err = await res.text();
+    return { ok: false, error: err.slice(0, 300) };
+  }
+
+  const data = (await res.json()) as {
+    posts?: Array<{ id?: string; url?: string; slug?: string; title?: string }>;
+  };
+  const post = data.posts?.[0];
+  const config = getGhostAdminConfig();
+  const url = post?.url ?? (post?.slug && config ? `${config.baseUrl}/${post.slug}/` : undefined);
+
+  return { ok: true, id: post?.id ?? input.id, url };
+}
+
 /** Update SEO metadata without changing post HTML. */
 export async function updateGhostPostSeo(input: {
   id: string;

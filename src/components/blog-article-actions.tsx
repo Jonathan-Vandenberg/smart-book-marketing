@@ -85,7 +85,7 @@ export function BlogArticleActions({ compact = false }: { compact?: boolean }) {
           : "";
 
       if (data.status === "ok") {
-        setFeedback(`${data.message ?? "Published."}${dedupeNote}${backlinkNote}`);
+        setFeedback(`${data.message?.replace(/\.\s*Backlinked into \d+ older post\(s\)\./, ".") ?? "Published."}${dedupeNote}${backlinkNote}`);
       } else if (data.status === "skipped") {
         setFeedback(`${data.message ?? "Skipped."}${dedupeNote}`);
       } else {

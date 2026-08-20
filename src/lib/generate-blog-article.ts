@@ -23,6 +23,7 @@ import {
   type BlogTopicAssignment,
 } from "@/lib/blog-dedup";
 import { BLOG_TOPICS, getBlogTopicBySlug } from "@/lib/blog-topics";
+import { sanitizeBlogArticleFields } from "@/lib/blog-sanitize";
 import { ensureGhostSiteSeo } from "@/lib/ensure-ghost-seo";
 import {
   wrapJsonLdFootInjection,
@@ -261,7 +262,8 @@ WRITING STYLE:
 - Short paragraphs, scannable H2/H3 structure
 - Practical advice with concrete examples
 - Avoid: "delve into", "unlock", "game-changer", "comprehensive guide"
-- Do NOT reference today's date or "as of" qualifiers
+- Do NOT reference today's date, the current year, calendar years (2024/2025/2026), or "as of" qualifiers anywhere — not in TITLE, headings, or body
+- NEVER use "in 2025" / "in 2026" title patterns — write timeless evergreen copy that stays accurate without yearly updates
 
 SEO STRUCTURE:
 - Short direct answer near the top
@@ -272,9 +274,9 @@ SEO STRUCTURE:
 
 OUTPUT FORMAT — follow exactly:
 ---META---
-TITLE: [SEO title with primary keyword]
-META_DESCRIPTION: [150–160 chars]
-SLUG: [url-friendly-slug-without-date]
+TITLE: [SEO title with primary keyword — no calendar year]
+META_DESCRIPTION: [150–160 chars — no calendar year]
+SLUG: [url-friendly-slug-without-date-or-year]
 PRIMARY_KEYWORD: [main target keyword]
 CATEGORY: [one of: craft-fiction | research-academia | ai-done-right | build-in-public | publishing-marketing | general]
 TAGS: [comma-separated Ghost tags, 2–4 tags]
@@ -310,9 +312,10 @@ Your task:
 1. Write a comprehensive SEO article on the ASSIGNED ANGLE only. If it is a Google Trends topic, reframe the news for writers — not a generic news recap.
 2. Use news source URLs when provided; cite real authoritative URLs in SOURCE_URLS (never fabricate).
 3. Set CATEGORY to "${assignment.categorySlug}" unless a better pillar clearly fits the assigned topic.
-4. Your TITLE must be distinct from every blocked title — use fresh wording even when the topic is similar.
+4. Your TITLE must be distinct from every blocked title — use fresh wording even when the topic is similar. Do NOT include a calendar year in the title.
 5. Write 1200–1800 words following the system prompt structure.
 6. Include at least one early, natural mention of Smart Book Planner (smartbookplanner.com) — not only in the final paragraph.
+7. Do NOT mention today's date or the current year anywhere in the article.
 
 ${internalLinksSection}
 Output only the structured format. No preamble or refusal.`;
@@ -416,12 +419,24 @@ async function requestArticleFromOpenRouter(
     let slug = extractMetaField(meta, "SLUG").toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-|-$/g, "");
     if (!slug) slug = slugifyTitle(title);
 
-    return {
+    const sanitized = sanitizeBlogArticleFields({
       title,
+      slug,
       content,
       excerpt: extractMetaField(meta, "EXCERPT"),
       metaDescription: extractMetaField(meta, "META_DESCRIPTION"),
-      slug,
+    });
+
+    if (sanitized.title !== title) {
+      console.log(`[blog-cron] Stripped calendar year from title: "${title}" → "${sanitized.title}"`);
+    }
+
+    return {
+      title: sanitized.title,
+      content: sanitized.content,
+      excerpt: sanitized.excerpt,
+      metaDescription: sanitized.metaDescription,
+      slug: sanitized.slug,
       primaryKeyword,
       sourceUrls,
       category,

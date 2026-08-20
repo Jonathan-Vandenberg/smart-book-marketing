@@ -14,7 +14,8 @@
     "ghost:setup-seo": "node --import tsx scripts/setup-ghost-seo.mjs",
     "ghost:backfill-seo": "node --import tsx scripts/backfill-ghost-seo.mjs",
     "ghost:dedupe": "node --import tsx scripts/dedupe-ghost-posts.mjs",
-    "ghost:backfill-links": "node --import tsx scripts/backfill-ghost-links.mjs"
+    "ghost:backfill-links": "node --import tsx scripts/backfill-ghost-links.mjs",
+    "ghost:fix-year": "node --import tsx scripts/fix-ghost-post-year.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.109.0",
