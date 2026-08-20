@@ -12,7 +12,8 @@
     "agents:run-once": "node --import tsx scripts/run-agents-once.mjs",
     "blog:run-once": "node --import tsx scripts/run-blog-cron-once.mjs",
     "ghost:setup-seo": "node --import tsx scripts/setup-ghost-seo.mjs",
-    "ghost:backfill-seo": "node --import tsx scripts/backfill-ghost-seo.mjs"
+    "ghost:backfill-seo": "node --import tsx scripts/backfill-ghost-seo.mjs",
+    "ghost:dedupe": "node --import tsx scripts/dedupe-ghost-posts.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.109.0",

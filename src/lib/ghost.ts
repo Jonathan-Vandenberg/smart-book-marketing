@@ -481,6 +481,29 @@ export async function fetchLatestPublishedPost(): Promise<GhostArticle | null> {
   };
 }
 
+/** Delete a Ghost post (duplicate cleanup). */
+export async function deleteGhostPost(input: {
+  id: string;
+  updatedAt: string;
+}): Promise<GhostPublishResult> {
+  const res = await ghostAdminRequest(`/ghost/api/admin/posts/${input.id}/`, {
+    method: "DELETE",
+    body: JSON.stringify({
+      posts: [{ id: input.id, updated_at: input.updatedAt }],
+    }),
+  });
+
+  if (!res) {
+    return { ok: false, error: "GHOST_URL and GHOST_ADMIN_API_KEY not configured" };
+  }
+  if (!res.ok) {
+    const err = await res.text();
+    return { ok: false, error: err.slice(0, 300) };
+  }
+
+  return { ok: true, id: input.id };
+}
+
 export async function publishToGhost(input: GhostPublishInput): Promise<GhostPublishResult> {
   const config = getGhostAdminConfig();
   if (!config) {

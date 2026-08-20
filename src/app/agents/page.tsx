@@ -1,7 +1,8 @@
 import { auth } from "@/lib/auth";
 import { getAgentRuns, agentsEnabled, getEnv } from "@/lib/store";
 import { DashboardHeader } from "@/components/dashboard-shell";
-import { runContentAgentAction, runPublishAgentAction, runBlogAgentAction } from "@/app/actions/drafts";
+import { BlogArticleActions } from "@/components/blog-article-actions";
+import { runContentAgentAction, runPublishAgentAction } from "@/app/actions/drafts";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,11 @@ export default async function AgentsPage() {
     <main>
       <DashboardHeader current="/agents" email={session?.user?.email} />
 
+      <section className="card" style={{ marginBottom: "1.5rem" }}>
+        <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>Ghost blog — writing news pipeline</h2>
+        <BlogArticleActions />
+      </section>
+
       <section className="grid grid-2" style={{ marginBottom: "1.5rem" }}>
         <div className="card">
           <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>Agent status</h2>
@@ -29,16 +35,13 @@ export default async function AgentsPage() {
           <p className="muted">Cron jobs run via Next.js instrumentation on server start.</p>
         </div>
         <div className="card">
-          <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>Run now</h2>
+          <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>Run social agents</h2>
           <div className="inline-actions">
             <form action={runContentAgentAction}>
               <button type="submit" className="btn btn-primary btn-sm">Content agent</button>
             </form>
             <form action={runPublishAgentAction}>
               <button type="submit" className="btn btn-sm">Publish agent</button>
-            </form>
-            <form action={runBlogAgentAction}>
-              <button type="submit" className="btn btn-sm">Blog cron (Ghost)</button>
             </form>
           </div>
         </div>

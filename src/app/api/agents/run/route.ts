@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { runAnalyticsAgent } from "@/agents/analytics";
+import { runBlogAgent } from "@/agents/blog";
 import { runContentAgent } from "@/agents/content";
 import { runDailyTipAgent } from "@/agents/daily-tip";
 import { runPublishAgent } from "@/agents/publish";
@@ -12,6 +13,7 @@ const AGENTS = {
   publish: runPublishAgent,
   analytics: runAnalyticsAgent,
   "daily-tip": runDailyTipAgent,
+  blog: () => runBlogAgent({ force: true, dedupeFirst: true }),
 } as const;
 
 export async function POST(request: Request) {

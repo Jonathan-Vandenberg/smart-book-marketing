@@ -6,10 +6,18 @@ import {
   ghostPostHref,
   isGhostConfigured,
   listPublishedGhostPosts,
+  listPublishedGhostPostsForSeo,
   publishToGhost,
   updateGhostPostHtml,
   type GhostPostMeta,
 } from "@/lib/ghost";
+import {
+  articleMatchesExisting,
+  buildUncoveredPillarPromptBlock,
+  filterTrendsForExisting,
+  formatTrendListForPrompt,
+  hasRecentBlogPublish,
+} from "@/lib/blog-dedup";
 import { BLOG_TOPICS, getBlogTopicBySlug, topicGuideForPrompt } from "@/lib/blog-topics";
 import { ensureGhostSiteSeo } from "@/lib/ensure-ghost-seo";
 import {
@@ -49,6 +57,7 @@ export type GeneratedBlogArticle = {
 
 export type BlogPublishResult = {
   success: boolean;
+  skipped?: boolean;
   title?: string;
   slug?: string;
   url?: string;
@@ -197,6 +206,8 @@ const SYSTEM_PROMPT = `You are an elite SEO strategist, expert editor, and autho
 
 Your mission is to create a high-quality article of 1200–1800 words that can realistically rank on Google, attract organic traffic, and help writers plan and finish manuscripts.
 
+You will receive today's Google Trends topics (with news source URLs). Pick ONE trend and reframe it for writers/authors — or fall back to an uncovered content-pillar query when no trend fits. Do NOT write generic news recaps or geopolitical/finance analysis.
+
 Do NOT write generic AI filler. Make smart assumptions based on search intent and competitor gaps.
 
 WRITING STYLE:
@@ -230,51 +241,41 @@ SOURCE_URLS: [comma-separated authoritative URLs referenced]
 async function callAI(
   trends: TrendingTopic[],
   linkCandidates: { title: string; slug: string }[],
+  existingTitles: string[],
+  pillarFallbackBlock: string,
   apiKey: string,
-  model: string,
-  options: { pillarOnly?: boolean } = {}
+  model: string
 ): Promise<GeneratedBlogArticle | null> {
   const brandVoice = loadBrandVoice();
-
-  const topicList = trends
-    .map((t, i) => `${i + 1}. ${t.topic}`)
-    .join("\n");
+  const topicList = formatTrendListForPrompt(trends);
 
   const internalLinksSection =
     linkCandidates.length > 0
       ? `\nINTERNAL LINKING: Where topically natural, weave in 2–3 inline links to existing articles. Use exact HTML: <a href="${ghostPostHref("{slug}")}">{descriptive anchor text}</a> (replace {slug} with the slug below).\n\nExisting articles:\n${linkCandidates.map((p) => `- ${p.title} → slug: ${p.slug}`).join("\n")}\n`
       : "";
 
-  const userPrompt = options.pillarOnly
-    ? `Brand voice reference:
+  const alreadyPublished =
+    existingTitles.length > 0
+      ? `\nAlready published on this blog (do NOT repeat these titles or angles):\n${existingTitles.map((t) => `- ${t}`).join("\n")}\n`
+      : "";
+
+  const userPrompt = `Brand voice reference:
 ${brandVoice}
 
-CONTENT PILLARS — pick the strongest SEO angle for writers and authors:
-${topicGuideForPrompt()}
-
-Your task:
-1. Choose one pillar topic with clear search intent.
-2. Write a comprehensive SEO article. Cite only real sources in SOURCE_URLS.
-3. Assign CATEGORY, TAGS, and all META fields.
-4. Output the exact ---META--- / ---ARTICLE--- / ---END--- format.
-
-${internalLinksSection}
-Output only the structured format. No preamble.`
-    : `Brand voice reference:
-${brandVoice}
-
-Search trend signals (topic inspiration only — do NOT cite or link these trend URLs; they are RSS headlines, not verified sources):
+Here are today's trending topics from Google Trends (with source news URLs):
 ${topicList}
 
-CONTENT PILLARS — prefer angles that fit one of these categories for writers and authors:
+CONTENT PILLARS — prefer angles that fit writers, authors, and book planning:
 ${topicGuideForPrompt()}
+${pillarFallbackBlock}
+${alreadyPublished}
 
 Your task:
-1. Pick ONE angle: reframe a trend for writers/authors/researchers, OR choose a high-intent pillar topic if trends are not a good fit.
-2. Write a comprehensive SEO article using your own knowledge. Cite only real, authoritative sources in SOURCE_URLS (writing blogs, publishers, smartbookplanner.com — never fabricate URLs).
-3. Assign the best CATEGORY slug (or "general").
-4. List TAGS for Ghost (category slug + 1–2 topical tags).
-5. Output the exact ---META--- / ---ARTICLE--- / ---END--- format from the system prompt.
+1. Pick the trend most relevant to WRITING, AUTHORS, BOOK PLANNING, FICTION CRAFT, RESEARCH WRITING, or INDIE PUBLISHING. Reframe the news as practical advice for writers — NOT a generic news recap or geopolitical/finance analysis.
+2. Use the provided source URLs for context when researching; cite real authoritative URLs in SOURCE_URLS (writing blogs, publishers, literary orgs — never fabricate).
+3. If no trend fits writers well, pick ONE uncovered pillar query from the fallback list above instead.
+4. Assign the best CATEGORY slug from the pillars (or "general" if none fit).
+5. Write a comprehensive SEO article (1200–1800 words) following the system prompt structure.
 
 ${internalLinksSection}
 Output only the structured format. No preamble or refusal.`;
@@ -674,8 +675,15 @@ export async function injectGhostBacklinks(
   return updatedSlugs;
 }
 
+export type BlogGenerateOptions = {
+  /** Manual dashboard runs bypass the 20h publish guard. Cron keeps default false. */
+  force?: boolean;
+};
+
 /** Full pipeline: trends → AI article → cover image → Ghost publish → backlink injection. */
-export async function generateAndPublishBlogArticle(): Promise<BlogPublishResult> {
+export async function generateAndPublishBlogArticle(
+  options: BlogGenerateOptions = {}
+): Promise<BlogPublishResult> {
   if (!isGhostConfigured()) {
     return { success: false, error: "Ghost not configured (GHOST_URL + GHOST_ADMIN_API_KEY)" };
   }
@@ -700,25 +708,54 @@ export async function generateAndPublishBlogArticle(): Promise<BlogPublishResult
   console.log(`[blog-cron] Found ${trends.length} trending topics`);
 
   const existingPosts = await listPublishedGhostPosts();
-  const recentTitles = existingPosts.slice(0, 10).map((p) => p.title.toLowerCase());
+  const existingPostsSeo = await listPublishedGhostPostsForSeo();
 
-  const filteredTrends = trends.filter(
-    (t) =>
-      !recentTitles.some(
-        (rt) => rt.includes(t.topic.toLowerCase()) || t.topic.toLowerCase().includes(rt)
-      )
-  );
+  if (!options.force && hasRecentBlogPublish(existingPostsSeo)) {
+    return {
+      success: false,
+      skipped: true,
+      error: "Blog post already published in the last 20 hours — skipping",
+    };
+  }
+
+  const filteredTrends = filterTrendsForExisting(trends, existingPosts);
   const trendsToUse = filteredTrends.length > 0 ? filteredTrends : trends;
+  const pillarFallbackBlock = buildUncoveredPillarPromptBlock(existingPosts);
+
+  if (trendsToUse.length === 0 && !pillarFallbackBlock) {
+    return {
+      success: false,
+      skipped: true,
+      error: "All trend and pillar topics already covered — skipping",
+    };
+  }
+
+  console.log(
+    `[blog-cron] Using ${trendsToUse.length} trends${filteredTrends.length < trends.length ? " (filtered for duplicates)" : ""}`
+  );
 
   const linkCandidates = existingPosts.map((p) => ({ title: p.title, slug: p.slug }));
+  const existingTitles = existingPosts.map((p) => p.title);
 
-  let article = await callAI(trendsToUse, linkCandidates, apiKey, model);
-  if (!article) {
-    console.log("[blog-cron] Retrying with pillar-only prompt (no trends)…");
-    article = await callAI([], linkCandidates, apiKey, model, { pillarOnly: true });
-  }
+  const article = await callAI(
+    trendsToUse,
+    linkCandidates,
+    existingTitles,
+    pillarFallbackBlock,
+    apiKey,
+    model
+  );
+
   if (!article) {
     return { success: false, error: "Failed to generate article" };
+  }
+
+  if (articleMatchesExisting(article, existingPosts)) {
+    return {
+      success: false,
+      skipped: true,
+      error: `Generated title duplicates existing post: ${article.title}`,
+    };
   }
 
   console.log(`[blog-cron] Generated: ${article.title}`);

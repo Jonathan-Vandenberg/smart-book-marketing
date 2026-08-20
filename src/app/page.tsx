@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { getAgentRuns, agentsEnabled } from "@/lib/store";
 import { getDashboardStats, listDrafts } from "@/lib/drafts";
 import { DashboardHeader } from "@/components/dashboard-shell";
+import { BlogArticleActions } from "@/components/blog-article-actions";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +33,11 @@ export default async function DashboardPage() {
           <p className="stat-value">{stats.platformCount}</p>
           <Link href="/platforms">Manage platforms →</Link>
         </div>
+      </section>
+
+      <section className="card" style={{ marginBottom: "1.5rem" }}>
+        <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>Ghost blog</h2>
+        <BlogArticleActions compact />
       </section>
 
       <section className="grid grid-2" style={{ marginBottom: "1.5rem" }}>
