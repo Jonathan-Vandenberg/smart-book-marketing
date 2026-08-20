@@ -16,8 +16,10 @@ import {
   assignmentPromptBlock,
   blockedTitlesPromptBlock,
   filterTrendsForExisting,
+  getBlogTopicCooldownDays,
   hasRecentBlogPublish,
   pickBlogTopicAssignment,
+  type BlogPostForDedup,
   type BlogTopicAssignment,
 } from "@/lib/blog-dedup";
 import { BLOG_TOPICS, getBlogTopicBySlug } from "@/lib/blog-topics";
@@ -244,7 +246,7 @@ SOURCE_URLS: [comma-separated authoritative URLs referenced]
 async function callAI(
   assignment: BlogTopicAssignment,
   linkCandidates: { title: string; slug: string }[],
-  existingPosts: GhostPostMeta[],
+  existingPosts: BlogPostForDedup[],
   apiKey: string,
   model: string
 ): Promise<GeneratedBlogArticle | null> {
@@ -864,8 +866,8 @@ export async function generateAndPublishBlogArticle(
 
   console.log(`[blog-cron] Found ${trends.length} trending topics`);
 
-  const existingPosts = await listPublishedGhostPosts();
   const existingPostsSeo = await listPublishedGhostPostsForSeo();
+  const cooldownDays = getBlogTopicCooldownDays();
 
   if (!options.force && hasRecentBlogPublish(existingPostsSeo)) {
     return {
@@ -875,31 +877,32 @@ export async function generateAndPublishBlogArticle(
     };
   }
 
-  const filteredTrends = filterTrendsForExisting(trends, existingPosts);
-  const assignment = pickBlogTopicAssignment(trends, existingPosts);
+  const filteredTrends = filterTrendsForExisting(trends, existingPostsSeo);
+  const assignment = pickBlogTopicAssignment(trends, existingPostsSeo);
 
   if (!assignment) {
     return {
       success: false,
       skipped: true,
-      error: "All trend and pillar topics already covered — skipping (no AI call)",
+      error: `No uncovered angles in the last ${cooldownDays} days — skipping (no AI call)`,
     };
   }
 
   console.log(
     `[blog-cron] Assigned angle (${assignment.source}): ${assignment.topic} [${assignment.categorySlug}]` +
-      (filteredTrends.length < trends.length ? ` (${trends.length - filteredTrends.length} trends filtered as covered)` : "")
+      ` (topic cooldown: ${cooldownDays}d)` +
+      (filteredTrends.length < trends.length ? `; ${trends.length - filteredTrends.length} trends filtered as recent` : "")
   );
 
-  const linkCandidates = existingPosts.map((p) => ({ title: p.title, slug: p.slug }));
+  const linkCandidates = existingPostsSeo.map((p) => ({ title: p.title, slug: p.slug }));
 
-  const article = await callAI(assignment, linkCandidates, existingPosts, apiKey, model);
+  const article = await callAI(assignment, linkCandidates, existingPostsSeo, apiKey, model);
 
   if (!article) {
     return { success: false, error: "Failed to generate article" };
   }
 
-  if (articleMatchesExisting(article, existingPosts)) {
+  if (articleMatchesExisting(article, existingPostsSeo)) {
     console.error(
       `[blog-cron] AI returned duplicate title despite pre-assignment — rejected before image/publish: ${article.title}`
     );

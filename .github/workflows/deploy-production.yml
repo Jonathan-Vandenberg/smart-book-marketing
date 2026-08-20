@@ -100,6 +100,7 @@ jobs:
             PUBLISH_CRON=0 8 * * *
             BLOG_CRON=0 9 * * *
             BLOG_AUTO_PUBLISH=true
+            BLOG_TOPIC_COOLDOWN_DAYS=7
             BLOG_AI_MODEL=x-ai/grok-4.20
             BLOG_IMAGE_MODEL=google/gemini-3.1-flash-image-preview
             NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}

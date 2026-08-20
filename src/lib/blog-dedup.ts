@@ -1,9 +1,16 @@
-import type { GhostPostMeta } from "@/lib/ghost";
 import { BLOG_TOPICS } from "@/lib/blog-topics";
+import { getEnv } from "@/lib/store";
 
 export type ArticleIdentity = { title: string; slug: string };
 
 export type TrendingTopicInput = { topic: string; newsUrls: string[] };
+
+/** Post fields needed for topic cooldown dedup. */
+export type BlogPostForDedup = {
+  title: string;
+  slug: string;
+  publishedAt?: string | null;
+};
 
 /** Topic chosen in code BEFORE the AI call — prevents paying for duplicate articles. */
 export type BlogTopicAssignment = {
@@ -12,6 +19,13 @@ export type BlogTopicAssignment = {
   source: "trend" | "pillar";
   newsUrls: string[];
 };
+
+/** Days before the same topic/angle can be written again (default 7). */
+export function getBlogTopicCooldownDays(): number {
+  const raw = getEnv("BLOG_TOPIC_COOLDOWN_DAYS", "7");
+  const n = Number.parseInt(raw, 10);
+  return Number.isFinite(n) && n > 0 ? n : 7;
+}
 
 /** Normalize title for duplicate comparison. */
 export function normalizeBlogTitle(title: string): string {
@@ -45,39 +59,65 @@ export function titlesAreDuplicates(a: string, b: string): boolean {
   return ratio >= 0.85;
 }
 
-export function articleMatchesExisting(
-  article: ArticleIdentity,
-  existing: GhostPostMeta[]
-): boolean {
-  const slugBase = canonicalSlugBase(article.slug);
-  return existing.some(
-    (p) =>
-      titlesAreDuplicates(article.title, p.title) ||
-      canonicalSlugBase(p.slug) === slugBase ||
-      p.slug === article.slug
-  );
+function topicMatchesPost(topic: string, post: BlogPostForDedup): boolean {
+  if (titlesAreDuplicates(topic, post.title)) return true;
+  const normalizedTopic = normalizeBlogTitle(topic);
+  const normalizedTitle = normalizeBlogTitle(post.title);
+  if (normalizedTitle.includes(normalizedTopic) || normalizedTopic.includes(normalizedTitle)) {
+    return true;
+  }
+  return false;
 }
 
-export function topicAlreadyCovered(topic: string, existing: GhostPostMeta[]): boolean {
-  const normalizedTopic = normalizeBlogTitle(topic);
-  if (!normalizedTopic) return false;
-
-  return existing.some((p) => {
-    if (titlesAreDuplicates(topic, p.title)) return true;
-    const normalizedTitle = normalizeBlogTitle(p.title);
-    // Target query covered if existing title contains the core query phrase
-    if (normalizedTitle.includes(normalizedTopic) || normalizedTopic.includes(normalizedTitle)) {
-      return true;
-    }
-    return false;
+/** Posts published within the topic cooldown window (default 7 days). */
+export function postsWithinTopicCooldown(
+  posts: BlogPostForDedup[],
+  withinDays = getBlogTopicCooldownDays()
+): BlogPostForDedup[] {
+  const cutoff = Date.now() - withinDays * 24 * 60 * 60 * 1000;
+  return posts.filter((p) => {
+    if (!p.publishedAt) return false;
+    return new Date(p.publishedAt).getTime() > cutoff;
   });
+}
+
+/** True if this topic was covered on the blog within the cooldown window. */
+export function topicRecentlyCovered(
+  topic: string,
+  posts: BlogPostForDedup[],
+  withinDays = getBlogTopicCooldownDays()
+): boolean {
+  const recent = postsWithinTopicCooldown(posts, withinDays);
+  return recent.some((p) => topicMatchesPost(topic, p));
+}
+
+/** @deprecated Use topicRecentlyCovered — kept for imports during transition. */
+export function topicAlreadyCovered(topic: string, posts: BlogPostForDedup[]): boolean {
+  return topicRecentlyCovered(topic, posts);
+}
+
+export function articleMatchesExisting(
+  article: ArticleIdentity,
+  posts: BlogPostForDedup[]
+): boolean {
+  const slugBase = canonicalSlugBase(article.slug);
+  const withinDays = getBlogTopicCooldownDays();
+  const recent = postsWithinTopicCooldown(posts, withinDays);
+
+  // Slug collision — always block (SEO canonical)
+  if (posts.some((p) => canonicalSlugBase(p.slug) === slugBase || p.slug === article.slug)) {
+    return true;
+  }
+
+  // Title / angle overlap — only within cooldown window
+  return recent.some((p) => titlesAreDuplicates(article.title, p.title));
 }
 
 export function filterTrendsForExisting(
   trends: TrendingTopicInput[],
-  existing: GhostPostMeta[]
+  posts: BlogPostForDedup[]
 ): TrendingTopicInput[] {
-  return trends.filter((t) => !topicAlreadyCovered(t.topic, existing));
+  return trends.filter((t) => !topicRecentlyCovered(t.topic, posts));
 }
 
 function inferCategoryFromTopic(topic: string): string {
@@ -95,14 +135,14 @@ function inferCategoryFromTopic(topic: string): string {
   return "general";
 }
 
-/** All deduped angles still available to write (trends first, then pillar queries). */
+/** All angles not written within the cooldown window (trends first, then pillar queries). */
 export function listAvailableBlogAngles(
   trends: TrendingTopicInput[],
-  existing: GhostPostMeta[]
+  posts: BlogPostForDedup[]
 ): BlogTopicAssignment[] {
   const angles: BlogTopicAssignment[] = [];
 
-  for (const trend of filterTrendsForExisting(trends, existing)) {
+  for (const trend of filterTrendsForExisting(trends, posts)) {
     angles.push({
       topic: trend.topic,
       source: "trend",
@@ -113,7 +153,7 @@ export function listAvailableBlogAngles(
 
   for (const pillar of BLOG_TOPICS) {
     for (const query of pillar.targetQueries) {
-      if (!topicAlreadyCovered(query, existing)) {
+      if (!topicRecentlyCovered(query, posts)) {
         angles.push({
           topic: query,
           source: "pillar",
@@ -128,14 +168,14 @@ export function listAvailableBlogAngles(
 }
 
 /**
- * Pick the next angle BEFORE calling OpenRouter — rotates daily so we don't always
- * hit craft-fiction #1. Skips anything already covered on Ghost.
+ * Pick the next angle BEFORE calling OpenRouter — rotates daily.
+ * Skips topics covered within BLOG_TOPIC_COOLDOWN_DAYS (default 7).
  */
 export function pickBlogTopicAssignment(
   trends: TrendingTopicInput[],
-  existing: GhostPostMeta[]
+  posts: BlogPostForDedup[]
 ): BlogTopicAssignment | null {
-  const candidates = listAvailableBlogAngles(trends, existing);
+  const candidates = listAvailableBlogAngles(trends, posts);
   if (candidates.length === 0) return null;
 
   const dayIndex = Math.floor(Date.now() / (24 * 60 * 60 * 1000));
@@ -143,7 +183,7 @@ export function pickBlogTopicAssignment(
 
   for (let i = 0; i < candidates.length; i++) {
     const candidate = candidates[(start + i) % candidates.length];
-    if (!topicAlreadyCovered(candidate.topic, existing)) {
+    if (!topicRecentlyCovered(candidate.topic, posts)) {
       return candidate;
     }
   }
@@ -166,11 +206,14 @@ Source: ${assignment.source === "trend" ? "Google Trends (reframe for writers)" 
 Your TITLE and PRIMARY_KEYWORD must be fresh SEO phrasing — not a copy of any blocked title below.`;
 }
 
-export function blockedTitlesPromptBlock(existing: GhostPostMeta[]): string {
-  if (existing.length === 0) return "";
+/** Titles from posts within the cooldown window — AI must not reuse these. */
+export function blockedTitlesPromptBlock(posts: BlogPostForDedup[]): string {
+  const recent = postsWithinTopicCooldown(posts);
+  if (recent.length === 0) return "";
+  const days = getBlogTopicCooldownDays();
   return `
-BLOCKED TITLES — do NOT reuse these titles or near-identical angles:
-${existing.map((p) => `- ${p.title}`).join("\n")}`;
+BLOCKED TITLES (published in the last ${days} days — do NOT reuse these titles or near-identical angles):
+${recent.map((p) => `- ${p.title}`).join("\n")}`;
 }
 
 export function hasRecentBlogPublish(
