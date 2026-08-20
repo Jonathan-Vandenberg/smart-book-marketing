@@ -222,7 +222,8 @@ SEO STRUCTURE:
 - Short direct answer near the top
 - Key takeaways (bullet list)
 - Clear H2/H3 sections, FAQ, conclusion with CTA to smartbookplanner.com
-- Mention Smart Book Planner naturally once near the end
+- Mention Smart Book Planner naturally TWICE: once early (within the first 2–3 sections after the intro, tied to planning/outlining the topic) and once in the conclusion CTA
+- When existing blog articles are listed, include 2–3 inline internal links to them using the exact href format given
 
 OUTPUT FORMAT — follow exactly:
 ---META---
@@ -251,7 +252,7 @@ async function callAI(
 
   const internalLinksSection =
     linkCandidates.length > 0
-      ? `\nINTERNAL LINKING: Where topically natural, weave in 2–3 inline links to existing articles. Use exact HTML: <a href="${ghostPostHref("{slug}")}">{descriptive anchor text}</a> (replace {slug} with the slug below).\n\nExisting articles:\n${linkCandidates.map((p) => `- ${p.title} → slug: ${p.slug}`).join("\n")}\n`
+      ? `\nINTERNAL LINKING (required when articles exist): Weave in at least 2 inline links to existing posts below. Use exact HTML: <a href="${ghostPostHref("{slug}")}">{descriptive anchor text}</a> (replace {slug}). Place links inside body paragraphs — not only in a list at the end.\n\nExisting articles:\n${linkCandidates.slice(0, 15).map((p) => `- ${p.title} → slug: ${p.slug}`).join("\n")}\n`
       : "";
 
   const alreadyPublished =
@@ -276,6 +277,7 @@ Your task:
 3. If no trend fits writers well, pick ONE uncovered pillar query from the fallback list above instead.
 4. Assign the best CATEGORY slug from the pillars (or "general" if none fit).
 5. Write a comprehensive SEO article (1200–1800 words) following the system prompt structure.
+6. Include at least one early, natural mention of Smart Book Planner (smartbookplanner.com) for manuscript planning — not only in the final paragraph.
 
 ${internalLinksSection}
 Output only the structured format. No preamble or refusal.`;
@@ -504,9 +506,109 @@ export async function generateCoverImage(
   }
 }
 
+function countInternalLinks(html: string, slugs: string[]): number {
+  let count = 0;
+  for (const slug of slugs) {
+    if (html.includes(ghostPostHref(slug)) || html.includes(`/${slug}"`) || html.includes(`/${slug}/`)) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+/** Ensure new post links to at least 2 existing posts when the model skipped internal links. */
+function ensureOutboundInternalLinks(
+  html: string,
+  candidates: { title: string; slug: string }[],
+  minLinks = 2
+): string {
+  if (candidates.length === 0) return html;
+
+  const slugs = candidates.map((c) => c.slug);
+  if (countInternalLinks(html, slugs) >= minLinks) return html;
+
+  const missing = candidates.filter(
+    (c) => !html.includes(ghostPostHref(c.slug)) && !html.includes(`/${c.slug}/`)
+  );
+  if (missing.length === 0) return html;
+
+  const picks = missing.slice(0, Math.max(minLinks, 2));
+  const items = picks
+    .map((p) => `<li><a href="${ghostPostHref(p.slug)}">${p.title}</a></li>`)
+    .join("\n");
+
+  return (
+    html +
+    `\n<h2>Related on this blog</h2>\n<ul>\n${items}\n</ul>`
+  );
+}
+
+function postAlreadyLinksTo(html: string, newSlug: string): boolean {
+  return html.includes(ghostPostHref(newSlug)) || html.includes(`/${newSlug}/`);
+}
+
+function deterministicBacklinkHtml(
+  html: string,
+  newTitle: string,
+  newSlug: string
+): string {
+  const href = ghostPostHref(newSlug);
+  if (postAlreadyLinksTo(html, newSlug)) return html;
+
+  const insert = `<p>See also: <a href="${href}">${newTitle}</a>.</p>`;
+  const lastH2 = html.lastIndexOf("<h2");
+  if (lastH2 > 0) {
+    return html.slice(0, lastH2) + insert + html.slice(lastH2);
+  }
+  return html + insert;
+}
+
+function parseBacklinkCandidateIds(text: string, allPosts: GhostPostMeta[]): GhostPostMeta[] {
+  const jsonMatch = text.match(/\[[\s\S]*?\]/);
+  if (!jsonMatch) return [];
+
+  try {
+    const parsed = JSON.parse(jsonMatch[0]) as unknown;
+    if (!Array.isArray(parsed)) return [];
+
+    const idSet = new Set(parsed.map((v) => String(v)));
+    return allPosts.filter((p) => idSet.has(String(p.id)));
+  } catch {
+    return [];
+  }
+}
+
+function fallbackBacklinkCandidates(
+  allPosts: GhostPostMeta[],
+  newSlug: string,
+  max = 3
+): GhostPostMeta[] {
+  return allPosts
+    .filter((p) => p.slug !== newSlug)
+    .slice(0, max);
+}
+
+function ensureProductMentions(html: string, productUrl: string): string {
+  const lower = html.toLowerCase();
+  const count = (lower.match(/smart book planner|smartbookplanner\.com/g) || []).length;
+  if (count >= 2) return html;
+
+  const earlyBlurb = `<p>When you're ready to structure your draft, <a href="${productUrl}">Smart Book Planner</a> gives you a clear outline before you write chapter one.</p>`;
+  const firstH2End = html.indexOf("</h2>");
+  if (firstH2End === -1) return earlyBlurb + html;
+
+  const firstHalf = lower.slice(0, Math.floor(lower.length * 0.45));
+  if (firstHalf.includes("smart book planner") || firstHalf.includes("smartbookplanner.com")) {
+    return html;
+  }
+
+  return html.slice(0, firstH2End + 5) + earlyBlurb + html.slice(firstH2End + 5);
+}
+
 async function selectBacklinkCandidates(
   newTitle: string,
   newExcerpt: string,
+  newSlug: string,
   allPosts: GhostPostMeta[],
   apiKey: string,
   model: string
@@ -524,7 +626,7 @@ Summary: ${newExcerpt}
 Existing articles:
 ${list}
 
-Select 2–3 articles most topically related where a backlink would read naturally. Return ONLY a JSON array of article IDs. Example: ["id-1","id-2"]`;
+Select 2–3 articles most topically related where a backlink would read naturally. Return ONLY a JSON array of Ghost post IDs exactly as shown in brackets. Example: ["673abc123","673def456"]`;
 
   try {
     const res = await fetch(OPENROUTER_API_URL, {
@@ -541,18 +643,24 @@ Select 2–3 articles most topically related where a backlink would read natural
       }),
     });
 
-    if (!res.ok) return [];
-
-    const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const text = data.choices?.[0]?.message?.content ?? "";
-    const jsonMatch = text.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) return [];
-
-    const ids: string[] = JSON.parse(jsonMatch[0]);
-    return allPosts.filter((p) => ids.includes(p.id));
+    if (res.ok) {
+      const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+      const text = data.choices?.[0]?.message?.content ?? "";
+      const matched = parseBacklinkCandidateIds(text, allPosts);
+      if (matched.length > 0) {
+        const merged = [...matched];
+        for (const p of fallbackBacklinkCandidates(allPosts, newSlug, 5)) {
+          if (merged.length >= 3) break;
+          if (!merged.some((m) => m.id === p.id)) merged.push(p);
+        }
+        return merged.slice(0, 3);
+      }
+    }
   } catch {
-    return [];
+    // fall through
   }
+
+  return fallbackBacklinkCandidates(allPosts, newSlug, 3);
 }
 
 async function injectBacklinkIntoPost(
@@ -561,8 +669,10 @@ async function injectBacklinkIntoPost(
   newSlug: string,
   apiKey: string,
   model: string
-): Promise<string | null> {
+): Promise<string> {
   const href = ghostPostHref(newSlug);
+  if (postAlreadyLinksTo(post.html, newSlug)) return post.html;
+
   const prompt = `You are a content editor adding a single internal link to an existing article.
 
 Existing article title: ${post.title}
@@ -593,20 +703,22 @@ ${post.html}`;
       }),
     });
 
-    if (!res.ok) return null;
-
-    const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const updated = data.choices?.[0]?.message?.content ?? "";
-    if (!updated.includes("<")) return null;
-
-    const firstTag = updated.indexOf("<");
-    const lastTag = updated.lastIndexOf(">");
-    if (firstTag === -1 || lastTag === -1) return null;
-
-    return updated.substring(firstTag, lastTag + 1);
+    if (res.ok) {
+      const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+      const updated = data.choices?.[0]?.message?.content ?? "";
+      if (updated.includes("<") && postAlreadyLinksTo(updated, newSlug)) {
+        const firstTag = updated.indexOf("<");
+        const lastTag = updated.lastIndexOf(">");
+        if (firstTag !== -1 && lastTag !== -1) {
+          return updated.substring(firstTag, lastTag + 1);
+        }
+      }
+    }
   } catch {
-    return null;
+    // deterministic fallback below
   }
+
+  return deterministicBacklinkHtml(post.html, newTitle, newSlug);
 }
 
 export async function injectGhostBacklinks(
@@ -624,7 +736,14 @@ export async function injectGhostBacklinks(
 
   console.log(`[blog-cron] Selecting backlink candidates from ${allPostMeta.length} Ghost posts…`);
 
-  const candidates = await selectBacklinkCandidates(newTitle, newExcerpt, allPostMeta, apiKey, model);
+  const candidates = await selectBacklinkCandidates(
+    newTitle,
+    newExcerpt,
+    newSlug,
+    allPostMeta,
+    apiKey,
+    model
+  );
   if (candidates.length === 0) {
     console.log("[blog-cron] No suitable backlink candidates");
     return updatedSlugs;
@@ -645,6 +764,11 @@ export async function injectGhostBacklinks(
       continue;
     }
 
+    if (postAlreadyLinksTo(full.html, newSlug)) {
+      console.log(`[blog-cron] Already links to new post: ${candidate.title}`);
+      continue;
+    }
+
     const updatedHtml = await injectBacklinkIntoPost(
       { id: full.id, title: full.title, slug: full.slug, html: full.html },
       newTitle,
@@ -653,8 +777,8 @@ export async function injectGhostBacklinks(
       model
     );
 
-    if (!updatedHtml) {
-      console.warn(`[blog-cron] Backlink injection failed: ${candidate.title}`);
+    if (updatedHtml === full.html) {
+      console.warn(`[blog-cron] No backlink change for: ${candidate.title}`);
       continue;
     }
 
@@ -673,6 +797,47 @@ export async function injectGhostBacklinks(
   }
 
   return updatedSlugs;
+}
+
+/** Add backlinks from older posts → latest published post (repair / manual). */
+export async function backfillBacklinksToLatestPost(): Promise<{
+  ok: boolean;
+  backlinkedSlugs?: string[];
+  latestTitle?: string;
+  error?: string;
+}> {
+  if (!isGhostConfigured()) {
+    return { ok: false, error: "Ghost not configured" };
+  }
+
+  const apiKey = getOpenRouterApiKey();
+  if (!apiKey) {
+    return { ok: false, error: "OPENROUTER_API_KEY not set" };
+  }
+
+  const posts = await listPublishedGhostPosts("1");
+  const latest = posts[0];
+  if (!latest) {
+    return { ok: false, error: "No published posts" };
+  }
+
+  const full = await fetchGhostPost(latest.id);
+  const excerpt = full?.customExcerpt ?? latest.title;
+
+  const backlinkedSlugs = await injectGhostBacklinks(
+    latest.id,
+    latest.title,
+    excerpt,
+    latest.slug,
+    apiKey,
+    getBlogAiModel()
+  );
+
+  return {
+    ok: true,
+    latestTitle: latest.title,
+    backlinkedSlugs,
+  };
 }
 
 export type BlogGenerateOptions = {
@@ -760,10 +925,13 @@ export async function generateAndPublishBlogArticle(
 
   console.log(`[blog-cron] Generated: ${article.title}`);
 
-  const contentWithAttribution = article.content + buildSourceAttribution(article.sourceUrls);
+  const productUrl = getEnv("PRODUCT_URL", "https://smartbookplanner.com");
+  let contentWithAttribution = article.content + buildSourceAttribution(article.sourceUrls);
+  contentWithAttribution = ensureOutboundInternalLinks(contentWithAttribution, linkCandidates);
+  contentWithAttribution = ensureProductMentions(contentWithAttribution, productUrl);
   const featureImage = await generateCoverImage(article.title, article.excerpt, apiKey);
 
-  const ctaHtml = `<p><strong>Start your manuscript →</strong> <a href="${getEnv("PRODUCT_URL", "https://smartbookplanner.com")}">Smart Book Planner</a></p>`;
+  const ctaHtml = `<p><strong>Start your manuscript →</strong> <a href="${productUrl}">Smart Book Planner</a></p>`;
   const htmlWithCta = contentWithAttribution.includes("smartbookplanner.com")
     ? contentWithAttribution
     : contentWithAttribution + ctaHtml;
