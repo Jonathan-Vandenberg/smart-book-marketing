@@ -18,7 +18,7 @@ import {
   filterTrendsForExisting,
   getBlogTopicCooldownDays,
   hasRecentBlogPublish,
-  pickBlogTopicAssignment,
+  pickBlogTopicCandidates,
   type BlogPostForDedup,
   type BlogTopicAssignment,
 } from "@/lib/blog-dedup";
@@ -110,8 +110,17 @@ function titleFromHtml(html: string): string | null {
 function titleFromAssignmentTopic(topic: string): string {
   return topic
     .split(/\s+/)
-    .map((w) => (w.length <= 3 ? w : w.charAt(0).toUpperCase() + w.slice(1)))
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
+}
+
+function buildFallbackTitle(assignmentTopic: string, categorySlug: string): string {
+  const topicTitle = titleFromAssignmentTopic(assignmentTopic);
+  if (categorySlug && categorySlug !== "general") {
+    return topicTitle;
+  }
+  return `What Writers Can Learn From ${topicTitle}`;
 }
 
 function resolveArticleTitle(
@@ -119,7 +128,8 @@ function resolveArticleTitle(
   articleBody: string,
   content: string,
   rawText: string,
-  assignmentTopic?: string
+  assignmentTopic?: string,
+  categorySlug?: string
 ): string {
   return (
     extractMetaField(meta, "TITLE") ||
@@ -127,8 +137,24 @@ function resolveArticleTitle(
     titleFromHtml(content) ||
     titleFromHtml(articleBody) ||
     titleFromMarkdown(articleBody) ||
-    (assignmentTopic ? titleFromAssignmentTopic(assignmentTopic) : "") ||
+    (assignmentTopic ? buildFallbackTitle(assignmentTopic, categorySlug ?? "general") : "") ||
     ""
+  );
+}
+
+function isAiRefusal(text: string): boolean {
+  const lower = text.toLowerCase();
+  return (
+    lower.includes("must decline") ||
+    lower.includes("i must decline") ||
+    lower.includes("cannot fulfill") ||
+    lower.includes("can't fulfill") ||
+    lower.includes("no meaningful connection") ||
+    lower.includes("i cannot write") ||
+    lower.includes("i can't write") ||
+    lower.includes("violating the instruct") ||
+    lower.includes("i'm unable to") ||
+    lower.includes("i am unable to")
   );
 }
 
@@ -254,6 +280,8 @@ Your mission is to create a high-quality article of 1200–1800 words that can r
 
 You will receive an ASSIGNED ANGLE chosen before this request (already deduped against published posts). Write ONLY that angle — do NOT drift to a covered topic like novel planning if it is blocked.
 
+If the angle seems tangential (news, celebrity, sports), REFRAME it for writers — memoir lessons, research workflow, storytelling craft, author productivity. Never refuse; always produce the structured output below.
+
 Do NOT write generic AI filler. Make smart assumptions based on search intent and competitor gaps.
 
 WRITING STYLE:
@@ -320,14 +348,21 @@ Your task:
 ${internalLinksSection}
 Output only the structured format. No preamble or refusal.`;
 
-  return requestArticleFromOpenRouter(apiKey, model, userPrompt, assignment.topic);
+  return requestArticleFromOpenRouter(
+    apiKey,
+    model,
+    userPrompt,
+    assignment.topic,
+    assignment.categorySlug
+  );
 }
 
 async function requestArticleFromOpenRouter(
   apiKey: string,
   model: string,
   userPrompt: string,
-  assignmentTopic?: string
+  assignmentTopic?: string,
+  categorySlug?: string
 ): Promise<GeneratedBlogArticle | null> {
   try {
     const res = await fetch(OPENROUTER_API_URL, {
@@ -356,6 +391,14 @@ async function requestArticleFromOpenRouter(
     const text = data.choices?.[0]?.message?.content;
     if (!text) return null;
 
+    if (isAiRefusal(text)) {
+      console.error(
+        `[blog-cron] AI refused assignment${assignmentTopic ? `: ${assignmentTopic}` : ""}`
+      );
+      console.error("[blog-cron] Refusal preview:", text.slice(0, 280).replace(/\n/g, " "));
+      return null;
+    }
+
     if (getEnv("BLOG_DEBUG") === "true") {
       const debugPath = path.join(process.cwd(), "data", "last-blog-ai-response.txt");
       fs.mkdirSync(path.dirname(debugPath), { recursive: true });
@@ -373,7 +416,14 @@ async function requestArticleFromOpenRouter(
     const { meta, articleBody } = parsed;
     const content = normalizeArticleHtml(articleBody);
 
-    const title = resolveArticleTitle(meta, articleBody, content, text, assignmentTopic);
+    const title = resolveArticleTitle(
+      meta,
+      articleBody,
+      content,
+      text,
+      assignmentTopic,
+      categorySlug
+    );
     if (!title || content.length < 100) {
       console.error("[blog-cron] Failed to parse article — missing title or body too short");
       console.error("[blog-cron] Title:", title || "(empty)", "| Body length:", content.length);
@@ -945,9 +995,9 @@ export async function generateAndPublishBlogArticle(
   }
 
   const filteredTrends = filterTrendsForExisting(trends, existingPostsSeo);
-  const assignment = pickBlogTopicAssignment(trends, existingPostsSeo);
+  const candidates = pickBlogTopicCandidates(trends, existingPostsSeo, 5);
 
-  if (!assignment) {
+  if (candidates.length === 0) {
     return {
       success: false,
       skipped: true,
@@ -955,18 +1005,35 @@ export async function generateAndPublishBlogArticle(
     };
   }
 
-  console.log(
-    `[blog-cron] Assigned angle (${assignment.source}): ${assignment.topic} [${assignment.categorySlug}]` +
-      ` (topic cooldown: ${cooldownDays}d)` +
-      (filteredTrends.length < trends.length ? `; ${trends.length - filteredTrends.length} trends filtered as recent` : "")
-  );
-
   const linkCandidates = existingPostsSeo.map((p) => ({ title: p.title, slug: p.slug }));
 
-  const article = await callAI(assignment, linkCandidates, existingPostsSeo, apiKey, model);
+  let article: GeneratedBlogArticle | null = null;
+  let assignment: BlogTopicAssignment | null = null;
+  const maxAttempts = Math.min(3, candidates.length);
 
-  if (!article) {
-    return { success: false, error: "Failed to generate article" };
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    assignment = candidates[attempt];
+    console.log(
+      `[blog-cron] Assigned angle (${assignment.source}, attempt ${attempt + 1}/${maxAttempts}): ${assignment.topic} [${assignment.categorySlug}]` +
+        ` (topic cooldown: ${cooldownDays}d)` +
+        (filteredTrends.length < trends.length
+          ? `; ${trends.length - filteredTrends.length} trends filtered as recent`
+          : "")
+    );
+
+    article = await callAI(assignment, linkCandidates, existingPostsSeo, apiKey, model);
+    if (article) break;
+
+    console.warn(
+      `[blog-cron] Generation failed for "${assignment.topic}" — ${attempt + 1 < maxAttempts ? "trying next angle" : "no more angles"}`
+    );
+  }
+
+  if (!article || !assignment) {
+    return {
+      success: false,
+      error: `Failed to generate article after ${maxAttempts} attempt(s) — last angle: ${candidates[maxAttempts - 1]?.topic ?? "unknown"}`,
+    };
   }
 
   if (articleMatchesExisting(article, existingPostsSeo)) {

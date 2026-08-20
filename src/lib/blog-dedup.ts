@@ -135,7 +135,50 @@ function inferCategoryFromTopic(topic: string): string {
   return "general";
 }
 
-/** All angles not written within the cooldown window (trends first, then pillar queries). */
+/** Google Trends topics must match writing/book domain — skip celebrity/news noise. */
+const WRITING_TREND_HINTS = [
+  "book",
+  "author",
+  "novel",
+  "write",
+  "writer",
+  "writing",
+  "publish",
+  "memoir",
+  "research",
+  "fiction",
+  "story",
+  "manuscript",
+  "literary",
+  "reading",
+  "bestseller",
+  "kindle",
+  "self publish",
+  "self-publish",
+  "plot",
+  "chapter",
+  "outline",
+  "citation",
+  "thesis",
+  "paper",
+  "academic",
+  "ai writing",
+  "chatgpt",
+];
+
+export function isTrendRelevantToWriters(topic: string): boolean {
+  if (inferCategoryFromTopic(topic) !== "general") return true;
+  const lower = topic.toLowerCase();
+  return WRITING_TREND_HINTS.some((hint) => lower.includes(hint));
+}
+
+function orderBlogAngleCandidates(candidates: BlogTopicAssignment[]): BlogTopicAssignment[] {
+  const pillars = candidates.filter((c) => c.source === "pillar");
+  const trends = candidates.filter((c) => c.source === "trend");
+  return [...pillars, ...trends];
+}
+
+/** All angles not written within the cooldown window (pillars + writing-relevant trends). */
 export function listAvailableBlogAngles(
   trends: TrendingTopicInput[],
   posts: BlogPostForDedup[]
@@ -143,6 +186,7 @@ export function listAvailableBlogAngles(
   const angles: BlogTopicAssignment[] = [];
 
   for (const trend of filterTrendsForExisting(trends, posts)) {
+    if (!isTrendRelevantToWriters(trend.topic)) continue;
     angles.push({
       topic: trend.topic,
       source: "trend",
@@ -168,6 +212,32 @@ export function listAvailableBlogAngles(
 }
 
 /**
+ * Ordered angles for generation (pillar queries first, then writing-relevant trends).
+ * Rotates daily; use first N entries as retry candidates when the model refuses or parse fails.
+ */
+export function pickBlogTopicCandidates(
+  trends: TrendingTopicInput[],
+  posts: BlogPostForDedup[],
+  max = 5
+): BlogTopicAssignment[] {
+  const candidates = orderBlogAngleCandidates(listAvailableBlogAngles(trends, posts));
+  if (candidates.length === 0) return [];
+
+  const dayIndex = Math.floor(Date.now() / (24 * 60 * 60 * 1000));
+  const start = dayIndex % candidates.length;
+  const rotated: BlogTopicAssignment[] = [];
+
+  for (let i = 0; i < candidates.length; i++) {
+    const candidate = candidates[(start + i) % candidates.length];
+    if (!topicRecentlyCovered(candidate.topic, posts)) {
+      rotated.push(candidate);
+    }
+  }
+
+  return rotated.slice(0, max);
+}
+
+/**
  * Pick the next angle BEFORE calling OpenRouter — rotates daily.
  * Skips topics covered within BLOG_TOPIC_COOLDOWN_DAYS (default 7).
  */
@@ -175,20 +245,7 @@ export function pickBlogTopicAssignment(
   trends: TrendingTopicInput[],
   posts: BlogPostForDedup[]
 ): BlogTopicAssignment | null {
-  const candidates = listAvailableBlogAngles(trends, posts);
-  if (candidates.length === 0) return null;
-
-  const dayIndex = Math.floor(Date.now() / (24 * 60 * 60 * 1000));
-  const start = dayIndex % candidates.length;
-
-  for (let i = 0; i < candidates.length; i++) {
-    const candidate = candidates[(start + i) % candidates.length];
-    if (!topicRecentlyCovered(candidate.topic, posts)) {
-      return candidate;
-    }
-  }
-
-  return null;
+  return pickBlogTopicCandidates(trends, posts, 1)[0] ?? null;
 }
 
 export function assignmentPromptBlock(assignment: BlogTopicAssignment): string {
