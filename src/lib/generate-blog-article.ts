@@ -86,8 +86,49 @@ function cleanMetaValue(value: string): string {
 }
 
 function extractMetaField(meta: string, key: string): string {
-  const m = meta.match(new RegExp(`^${key}:\\s*(.+)$`, "im"));
-  return m ? cleanMetaValue(m[1]) : "";
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const patterns = [
+    new RegExp(`^${escaped}\\s*:\\s*(.+)$`, "im"),
+    new RegExp(`^\\*\\*${escaped}\\*\\*\\s*:\\s*(.+)$`, "im"),
+    new RegExp(`^${escaped}\\s+-\\s+(.+)$`, "im"),
+  ];
+  for (const pattern of patterns) {
+    const m = meta.match(pattern);
+    if (m?.[1]) return cleanMetaValue(m[1]);
+  }
+  return "";
+}
+
+function titleFromHtml(html: string): string | null {
+  const h2 = html.match(/<h2[^>]*>([\s\S]*?)<\/h2>/i);
+  if (!h2?.[1]) return null;
+  const text = h2[1].replace(/<[^>]+>/g, "").trim();
+  return text || null;
+}
+
+function titleFromAssignmentTopic(topic: string): string {
+  return topic
+    .split(/\s+/)
+    .map((w) => (w.length <= 3 ? w : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(" ");
+}
+
+function resolveArticleTitle(
+  meta: string,
+  articleBody: string,
+  content: string,
+  rawText: string,
+  assignmentTopic?: string
+): string {
+  return (
+    extractMetaField(meta, "TITLE") ||
+    extractMetaField(rawText, "TITLE") ||
+    titleFromHtml(content) ||
+    titleFromHtml(articleBody) ||
+    titleFromMarkdown(articleBody) ||
+    (assignmentTopic ? titleFromAssignmentTopic(assignmentTopic) : "") ||
+    ""
+  );
 }
 
 /** Normalize AI output — models often omit ---END--- or return markdown instead of HTML. */
@@ -276,13 +317,14 @@ Your task:
 ${internalLinksSection}
 Output only the structured format. No preamble or refusal.`;
 
-  return requestArticleFromOpenRouter(apiKey, model, userPrompt);
+  return requestArticleFromOpenRouter(apiKey, model, userPrompt, assignment.topic);
 }
 
 async function requestArticleFromOpenRouter(
   apiKey: string,
   model: string,
-  userPrompt: string
+  userPrompt: string,
+  assignmentTopic?: string
 ): Promise<GeneratedBlogArticle | null> {
   try {
     const res = await fetch(OPENROUTER_API_URL, {
@@ -328,11 +370,21 @@ async function requestArticleFromOpenRouter(
     const { meta, articleBody } = parsed;
     const content = normalizeArticleHtml(articleBody);
 
-    let title = extractMetaField(meta, "TITLE") || titleFromMarkdown(articleBody);
+    const title = resolveArticleTitle(meta, articleBody, content, text, assignmentTopic);
     if (!title || content.length < 100) {
       console.error("[blog-cron] Failed to parse article — missing title or body too short");
       console.error("[blog-cron] Title:", title || "(empty)", "| Body length:", content.length);
+      console.error("[blog-cron] Meta preview:", meta.slice(0, 300).replace(/\n/g, " "));
+      if (getEnv("BLOG_DEBUG") !== "true") {
+        const debugPath = path.join(process.cwd(), "data", "last-blog-ai-response.txt");
+        fs.mkdirSync(path.dirname(debugPath), { recursive: true });
+        fs.writeFileSync(debugPath, text, "utf8");
+      }
       return null;
+    }
+
+    if (!extractMetaField(meta, "TITLE") && !extractMetaField(text, "TITLE")) {
+      console.warn(`[blog-cron] TITLE missing from meta — inferred: "${title}"`);
     }
 
     const rawSourceUrls = extractMetaField(meta, "SOURCE_URLS");
