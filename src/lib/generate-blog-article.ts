@@ -13,12 +13,14 @@ import {
 } from "@/lib/ghost";
 import {
   articleMatchesExisting,
-  buildUncoveredPillarPromptBlock,
+  assignmentPromptBlock,
+  blockedTitlesPromptBlock,
   filterTrendsForExisting,
-  formatTrendListForPrompt,
   hasRecentBlogPublish,
+  pickBlogTopicAssignment,
+  type BlogTopicAssignment,
 } from "@/lib/blog-dedup";
-import { BLOG_TOPICS, getBlogTopicBySlug, topicGuideForPrompt } from "@/lib/blog-topics";
+import { BLOG_TOPICS, getBlogTopicBySlug } from "@/lib/blog-topics";
 import { ensureGhostSiteSeo } from "@/lib/ensure-ghost-seo";
 import {
   wrapJsonLdFootInjection,
@@ -206,7 +208,7 @@ const SYSTEM_PROMPT = `You are an elite SEO strategist, expert editor, and autho
 
 Your mission is to create a high-quality article of 1200–1800 words that can realistically rank on Google, attract organic traffic, and help writers plan and finish manuscripts.
 
-You will receive today's Google Trends topics (with news source URLs). Pick ONE trend and reframe it for writers/authors — or fall back to an uncovered content-pillar query when no trend fits. Do NOT write generic news recaps or geopolitical/finance analysis.
+You will receive an ASSIGNED ANGLE chosen before this request (already deduped against published posts). Write ONLY that angle — do NOT drift to a covered topic like novel planning if it is blocked.
 
 Do NOT write generic AI filler. Make smart assumptions based on search intent and competitor gaps.
 
@@ -240,44 +242,34 @@ SOURCE_URLS: [comma-separated authoritative URLs referenced]
 ---END---`;
 
 async function callAI(
-  trends: TrendingTopic[],
+  assignment: BlogTopicAssignment,
   linkCandidates: { title: string; slug: string }[],
-  existingTitles: string[],
-  pillarFallbackBlock: string,
+  existingPosts: GhostPostMeta[],
   apiKey: string,
   model: string
 ): Promise<GeneratedBlogArticle | null> {
   const brandVoice = loadBrandVoice();
-  const topicList = formatTrendListForPrompt(trends);
+  const pillar = getBlogTopicBySlug(assignment.categorySlug);
 
   const internalLinksSection =
     linkCandidates.length > 0
       ? `\nINTERNAL LINKING (required when articles exist): Weave in at least 2 inline links to existing posts below. Use exact HTML: <a href="${ghostPostHref("{slug}")}">{descriptive anchor text}</a> (replace {slug}). Place links inside body paragraphs — not only in a list at the end.\n\nExisting articles:\n${linkCandidates.slice(0, 15).map((p) => `- ${p.title} → slug: ${p.slug}`).join("\n")}\n`
       : "";
 
-  const alreadyPublished =
-    existingTitles.length > 0
-      ? `\nAlready published on this blog (do NOT repeat these titles or angles):\n${existingTitles.map((t) => `- ${t}`).join("\n")}\n`
-      : "";
-
   const userPrompt = `Brand voice reference:
 ${brandVoice}
 
-Here are today's trending topics from Google Trends (with source news URLs):
-${topicList}
-
-CONTENT PILLARS — prefer angles that fit writers, authors, and book planning:
-${topicGuideForPrompt()}
-${pillarFallbackBlock}
-${alreadyPublished}
+Category context: ${pillar ? `${pillar.name} (${pillar.slug})` : assignment.categorySlug}
+${assignmentPromptBlock(assignment)}
+${blockedTitlesPromptBlock(existingPosts)}
 
 Your task:
-1. Pick the trend most relevant to WRITING, AUTHORS, BOOK PLANNING, FICTION CRAFT, RESEARCH WRITING, or INDIE PUBLISHING. Reframe the news as practical advice for writers — NOT a generic news recap or geopolitical/finance analysis.
-2. Use the provided source URLs for context when researching; cite real authoritative URLs in SOURCE_URLS (writing blogs, publishers, literary orgs — never fabricate).
-3. If no trend fits writers well, pick ONE uncovered pillar query from the fallback list above instead.
-4. Assign the best CATEGORY slug from the pillars (or "general" if none fit).
-5. Write a comprehensive SEO article (1200–1800 words) following the system prompt structure.
-6. Include at least one early, natural mention of Smart Book Planner (smartbookplanner.com) for manuscript planning — not only in the final paragraph.
+1. Write a comprehensive SEO article on the ASSIGNED ANGLE only. If it is a Google Trends topic, reframe the news for writers — not a generic news recap.
+2. Use news source URLs when provided; cite real authoritative URLs in SOURCE_URLS (never fabricate).
+3. Set CATEGORY to "${assignment.categorySlug}" unless a better pillar clearly fits the assigned topic.
+4. Your TITLE must be distinct from every blocked title — use fresh wording even when the topic is similar.
+5. Write 1200–1800 words following the system prompt structure.
+6. Include at least one early, natural mention of Smart Book Planner (smartbookplanner.com) — not only in the final paragraph.
 
 ${internalLinksSection}
 Output only the structured format. No preamble or refusal.`;
@@ -884,42 +876,37 @@ export async function generateAndPublishBlogArticle(
   }
 
   const filteredTrends = filterTrendsForExisting(trends, existingPosts);
-  const trendsToUse = filteredTrends.length > 0 ? filteredTrends : trends;
-  const pillarFallbackBlock = buildUncoveredPillarPromptBlock(existingPosts);
+  const assignment = pickBlogTopicAssignment(trends, existingPosts);
 
-  if (trendsToUse.length === 0 && !pillarFallbackBlock) {
+  if (!assignment) {
     return {
       success: false,
       skipped: true,
-      error: "All trend and pillar topics already covered — skipping",
+      error: "All trend and pillar topics already covered — skipping (no AI call)",
     };
   }
 
   console.log(
-    `[blog-cron] Using ${trendsToUse.length} trends${filteredTrends.length < trends.length ? " (filtered for duplicates)" : ""}`
+    `[blog-cron] Assigned angle (${assignment.source}): ${assignment.topic} [${assignment.categorySlug}]` +
+      (filteredTrends.length < trends.length ? ` (${trends.length - filteredTrends.length} trends filtered as covered)` : "")
   );
 
   const linkCandidates = existingPosts.map((p) => ({ title: p.title, slug: p.slug }));
-  const existingTitles = existingPosts.map((p) => p.title);
 
-  const article = await callAI(
-    trendsToUse,
-    linkCandidates,
-    existingTitles,
-    pillarFallbackBlock,
-    apiKey,
-    model
-  );
+  const article = await callAI(assignment, linkCandidates, existingPosts, apiKey, model);
 
   if (!article) {
     return { success: false, error: "Failed to generate article" };
   }
 
   if (articleMatchesExisting(article, existingPosts)) {
+    console.error(
+      `[blog-cron] AI returned duplicate title despite pre-assignment — rejected before image/publish: ${article.title}`
+    );
     return {
       success: false,
       skipped: true,
-      error: `Generated title duplicates existing post: ${article.title}`,
+      error: `Generated title duplicates existing post: ${article.title}. Assignment was: ${assignment.topic}`,
     };
   }
 

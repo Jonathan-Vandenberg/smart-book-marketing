@@ -5,6 +5,14 @@ export type ArticleIdentity = { title: string; slug: string };
 
 export type TrendingTopicInput = { topic: string; newsUrls: string[] };
 
+/** Topic chosen in code BEFORE the AI call — prevents paying for duplicate articles. */
+export type BlogTopicAssignment = {
+  topic: string;
+  categorySlug: string;
+  source: "trend" | "pillar";
+  newsUrls: string[];
+};
+
 /** Normalize title for duplicate comparison. */
 export function normalizeBlogTitle(title: string): string {
   return title
@@ -72,29 +80,97 @@ export function filterTrendsForExisting(
   return trends.filter((t) => !topicAlreadyCovered(t.topic, existing));
 }
 
-/** Uncovered pillar queries — fallback when no trend fits writers (listed for AI, not pre-assigned). */
-export function buildUncoveredPillarPromptBlock(existing: GhostPostMeta[]): string {
-  const lines: string[] = [];
+function inferCategoryFromTopic(topic: string): string {
+  const lower = topic.toLowerCase();
+  for (const pillar of BLOG_TOPICS) {
+    if (pillar.keywords.some((k) => lower.includes(k.toLowerCase()))) return pillar.slug;
+    if (
+      pillar.targetQueries.some(
+        (q) => lower.includes(q.toLowerCase()) || q.toLowerCase().includes(lower)
+      )
+    ) {
+      return pillar.slug;
+    }
+  }
+  return "general";
+}
+
+/** All deduped angles still available to write (trends first, then pillar queries). */
+export function listAvailableBlogAngles(
+  trends: TrendingTopicInput[],
+  existing: GhostPostMeta[]
+): BlogTopicAssignment[] {
+  const angles: BlogTopicAssignment[] = [];
+
+  for (const trend of filterTrendsForExisting(trends, existing)) {
+    angles.push({
+      topic: trend.topic,
+      source: "trend",
+      categorySlug: inferCategoryFromTopic(trend.topic),
+      newsUrls: trend.newsUrls,
+    });
+  }
+
   for (const pillar of BLOG_TOPICS) {
     for (const query of pillar.targetQueries) {
       if (!topicAlreadyCovered(query, existing)) {
-        lines.push(`- ${query} → category: ${pillar.slug}`);
+        angles.push({
+          topic: query,
+          source: "pillar",
+          categorySlug: pillar.slug,
+          newsUrls: [],
+        });
       }
     }
   }
-  if (lines.length === 0) return "";
-  return `
-If none of today's trends fit writers/authors well, pick ONE uncovered pillar query instead:
-${lines.join("\n")}`;
+
+  return angles;
 }
 
-export function formatTrendListForPrompt(trends: TrendingTopicInput[]): string {
-  return trends
-    .map(
-      (t, i) =>
-        `${i + 1}. ${t.topic}${t.newsUrls.length > 0 ? ` [sources: ${t.newsUrls.join(", ")}]` : ""}`
-    )
-    .join("\n");
+/**
+ * Pick the next angle BEFORE calling OpenRouter — rotates daily so we don't always
+ * hit craft-fiction #1. Skips anything already covered on Ghost.
+ */
+export function pickBlogTopicAssignment(
+  trends: TrendingTopicInput[],
+  existing: GhostPostMeta[]
+): BlogTopicAssignment | null {
+  const candidates = listAvailableBlogAngles(trends, existing);
+  if (candidates.length === 0) return null;
+
+  const dayIndex = Math.floor(Date.now() / (24 * 60 * 60 * 1000));
+  const start = dayIndex % candidates.length;
+
+  for (let i = 0; i < candidates.length; i++) {
+    const candidate = candidates[(start + i) % candidates.length];
+    if (!topicAlreadyCovered(candidate.topic, existing)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+export function assignmentPromptBlock(assignment: BlogTopicAssignment): string {
+  const sources =
+    assignment.newsUrls.length > 0
+      ? `\nNews source URLs for context: ${assignment.newsUrls.join(", ")}`
+      : "";
+
+  return `
+ASSIGNED ANGLE (required — write ONLY about this):
+${assignment.topic}
+Category: ${assignment.categorySlug}
+Source: ${assignment.source === "trend" ? "Google Trends (reframe for writers)" : "content pillar target query"}${sources}
+
+Your TITLE and PRIMARY_KEYWORD must be fresh SEO phrasing — not a copy of any blocked title below.`;
+}
+
+export function blockedTitlesPromptBlock(existing: GhostPostMeta[]): string {
+  if (existing.length === 0) return "";
+  return `
+BLOCKED TITLES — do NOT reuse these titles or near-identical angles:
+${existing.map((p) => `- ${p.title}`).join("\n")}`;
 }
 
 export function hasRecentBlogPublish(
